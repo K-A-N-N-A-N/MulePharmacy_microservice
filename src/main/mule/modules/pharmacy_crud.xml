@@ -23,7 +23,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 (id, sku, name, brand, unit, strength, price, stock, active)
 VALUES (:id, :sku, :name, :brand, :unit, :strength, :price, :stock, true)
 ]]></db:sql>
-			<db:input-parameters><![CDATA[#[{
+			<db:input-parameters><![CDATA[{
     id: vars.id,
     sku: payload.sku,
     name: payload.name,
@@ -32,7 +32,7 @@ VALUES (:id, :sku, :name, :brand, :unit, :strength, :price, :stock, true)
     strength: payload.strength,
     price: payload.price,
     stock: payload.stock
-  }]]]></db:input-parameters>
+  }]]></db:input-parameters>
 			<db:auto-generated-keys-column-indexes />
 		</db:insert>
 		<ee:transform doc:name="Transform Message" doc:id="51a15baa-ac79-4b6a-8ef7-cdde57944b25">
