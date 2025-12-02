@@ -1,46 +1,151 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+    xmlns:http="http://www.mulesoft.org/schema/mule/http"
+    xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-	<flow name="pharmacy_public_GetAll" doc:id="d88aecb8-d970-4ad6-81cc-38c2fc1dbb04" >
-		<http:listener doc:name="Listener" doc:id="90700342-2100-4e6f-8a2f-4ff5f8027e51" config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all"/>
-		<db:select doc:name="Select" doc:id="8399645d-1a06-49a0-9b8b-ac75926967af" config-ref="pharmacy_service">
-			<db:sql ><![CDATA[SELECT 
-  sku,name,brand,unit,strength,price,stock,active
-FROM pharmacy_medicines
-WHERE active = true;
-]]></db:sql>
-		</db:select>
-		<ee:transform doc:name="Transform Message" doc:id="02f2290e-8297-480d-a23b-94acbe7520d3" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+
+    <!-- GET ALL (unchanged) -->
+    <flow name="pharmacy_public_GetAll">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all"/>
+        <db:select config-ref="pharmacy_service">
+            <db:sql><![CDATA[
+                SELECT sku, name, brand, unit, strength, price, stock, active
+                FROM pharmacy_medicines
+                WHERE active = true;
+            ]]></db:sql>
+        </db:select>
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-payload]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-	</flow>
-	<flow name="pharmacy_public_GetBySkuID" doc:id="8b117690-039b-4486-b70e-4d0e303dd9a1" >
-		<http:listener doc:name="Listener" doc:id="5e72629e-843b-417c-b8c0-99c1906e55ba" config-ref="HTTP_Listener_config" path="/pharmacy/medicines/sku/{sku}/lite"/>
-		<db:select doc:name="Select" doc:id="b5a04ac8-8030-4125-8e45-9a2a40ca2be6" config-ref="pharmacy_service">
-			<db:sql ><![CDATA[SELECT 
-  sku,name,brand,price,stock
-FROM pharmacy_medicines
-WHERE sku = :sku AND active = true;
-]]></db:sql>
-			<db:input-parameters ><![CDATA[#[{sku: attributes.uriParams.sku}]]]></db:input-parameters>
-		</db:select>
-		<ee:transform doc:name="Transform Message" doc:id="1eec4dd8-5838-4d7a-9afa-ab5c8f330ca3" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+payload
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- GET LITE by SKU (unchanged) -->
+    <flow name="pharmacy_public_GetBySkuID">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/sku/{sku}/lite"/>
+        <db:select config-ref="pharmacy_service">
+            <db:sql><![CDATA[
+                SELECT sku, name, brand, price, stock
+                FROM pharmacy_medicines
+                WHERE sku = :sku AND active = true;
+            ]]></db:sql>
+            <db:input-parameters><![CDATA[#[{ sku: attributes.uriParams.sku }]]]></db:input-parameters>
+        </db:select>
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-(payload default [])[0]]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-	</flow>
+(payload default [])[0]
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- VALIDATE PRESCRIPTION -->
+    <flow name="pharmacy_publicFlow">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/validate-prescription" outputMimeType="application/json" allowedMethods="POST"/>
+
+        <!-- Normalize payload -->
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <!-- VARIABLES -->
+        <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]"/>
+        <set-variable variableName="items" value="#[payload.items]"/>
+        <set-variable variableName="results" value="#[[]]"/>
+        <set-variable variableName="i" value="#[0]"/>
+
+        <!-- FOR EACH -->
+        <foreach collection="#[vars.items]">
+            <db:select config-ref="pharmacy_service">
+                <db:sql><![CDATA[
+                    SELECT sku, name, brand, price, stock
+                    FROM pharmacy_medicines
+                    WHERE sku = :sku AND active = true;
+                ]]></db:sql>
+                <db:input-parameters><![CDATA[#[{
+                    sku: payload.sku
+                }]]]></db:input-parameters>
+            </db:select>
+
+            <!-- Transform each item -->
+            <ee:transform>
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+
+var itemInput = payload default []
+var requestItem = vars.items[vars.i]
+
+---
+if (isEmpty(itemInput)) 
+    {
+        sku: requestItem.sku,
+        requestedQuantity: requestItem.quantity,
+        status: "MEDICINE_NOT_FOUND"
+    }
+else do {
+    var db = itemInput[0]
+    ---
+    if (db.stock >= requestItem.quantity)
+        {
+            sku: db.sku,
+            name: db.name,
+            brand: db.brand,
+            price: db.price,
+            stock: db.stock,
+            requestedQuantity: requestItem.quantity,
+            status: "AVAILABLE"
+        }
+    else
+        {
+            sku: db.sku,
+            stock: db.stock,
+            requestedQuantity: requestItem.quantity,
+            status: "OUT_OF_STOCK"
+        }
+}
+]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+
+            <!-- Append to results -->
+            <set-variable variableName="results" value="#[vars.results ++ [payload]]"/>
+
+            <!-- INCREMENT COUNTER -->
+            <set-variable variableName="i" value="#[vars.i + 1]"/>
+        </foreach>
+
+        <!-- FINAL RESPONSE -->
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    prescriptionId: vars.prescriptionId,
+    validation: vars.results
+}
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+    </flow>
+
 </mule>
