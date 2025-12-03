@@ -51,7 +51,7 @@ output application/json
     </flow>
 
     <!-- VALIDATE PRESCRIPTION -->
-    <flow name="pharmacy_publicFlow">
+    <flow name="pharmacy_ValidationFlow" doc:id="227a9610-23b3-45f8-94db-25a77415d446">
         <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/validate-prescription" outputMimeType="application/json" allowedMethods="POST"/>
 
         <!-- Normalize payload -->
@@ -67,7 +67,8 @@ payload
 
         <!-- VARIABLES -->
         <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]"/>
-        <set-variable variableName="items" value="#[payload.items]"/>
+        <set-variable value="#[payload.patientId]" doc:name="Set Variable" doc:id="b7f0dc7c-1f99-40f7-b196-c9a1cf960514" variableName="patientId" mimeType="application/java"/>
+		<set-variable variableName="items" value="#[payload.items]"/>
         <set-variable variableName="results" value="#[[]]"/>
         <set-variable variableName="i" value="#[0]"/>
 
@@ -140,6 +141,7 @@ output application/json
 ---
 {
     prescriptionId: vars.prescriptionId,
+    patientId: vars.patientId,
     validation: vars.results
 }
 ]]></ee:set-payload>
@@ -147,5 +149,6 @@ output application/json
         </ee:transform>
 
     </flow>
+
 
 </mule>

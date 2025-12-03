@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" 
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+        http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+
+    
+    <flow name="pharmacy_paymentFlow" doc:id="3d91328d-e601-43cc-90d9-5fe4f330a6ba">
+
+        <!-- 1. Listener -->
+        <http:listener 
+            doc:name="Payment Summary Listener" 
+            config-ref="HTTP_Listener_config"
+            path="/pharmacy/payment-summary"
+            outputMimeType="application/json"
+            allowedMethods="POST"/>
+
+        <!-- 2. Normalize Payload -->
+        <ee:transform doc:name="Normalize Payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[
+%dw 2.0
+output application/java
+---
+payload
+                ]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <!-- 3. Extract variables -->
+        <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]"/>
+        <set-variable variableName="patientId" value="#[payload.patientId]"/>
+        <set-variable variableName="items" value="#[payload.items]"/>
+
+        <!-- 4. Call existing validation flow -->
+        <flow-ref name="pharmacy_ValidationFlow" doc:id="114ed8e0-de65-4ef6-b2ad-f9b624615816"/>
+
+        <!-- 5. Filter AVAILABLE items -->
+<ee:transform doc:name="Transform Message" doc:id="0769c2b3-8187-48cd-b2fe-0d9ccf06e7c6" >
+    <ee:message >
+        <ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+var validated = payload.validation default []
+---
+validated filter ((item) -> item.status == "AVAILABLE")
+]]></ee:set-payload>
+    </ee:message>
+</ee:transform>
+		
+		<!-- 6. Compute totals -->
+<ee:transform doc:name="Transform Message" doc:id="132528ba-4d9b-4bb7-97e5-ac3b046079fe" >
+    <ee:message >
+        <ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+
+var items = 
+    if (payload is Array) payload
+    else [payload]
+
+---
+{
+    payableItems: items map ((i) -> {
+        sku: i.sku,
+        quantity: i.requestedQuantity,
+        unitPrice: i.price,
+        lineTotal: i.price * i.requestedQuantity
+    }),
+    totalAmount: sum(items map ((i) -> i.price * i.requestedQuantity))
+}
+]]></ee:set-payload>
+    </ee:message>
+</ee:transform>
+		
+		<!-- 7. Create purchaseId -->
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="2328c722-eb7a-48b4-ba8d-1a60473952f4" variableName="summary"/>
+		<set-variable variableName="purchaseId" value="#[uuid()]"/>
+
+        <!-- 8. Insert summary into DB -->
+        <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service">
+            <db:sql><![CDATA[
+INSERT INTO pharmacy_purchase_log
+(id, purchase_id, patient_id, prescription_id, request_payload, response_payload, status)
+VALUES
+(:id, :purchaseId, :patientId, :prescriptionId, :req, :res, 'PENDING')
+            ]]></db:sql>
+
+            <db:input-parameters><![CDATA[#[{
+    id: uuid(),
+    purchaseId: vars.purchaseId,
+    patientId: vars.patientId,
+    prescriptionId: vars.prescriptionId,
+    req: write(vars.items, 'application/json'),
+    res: write(vars.summary, 'application/json')
+}]]]></db:input-parameters>
+        </db:insert>
+
+        <!-- 9. Final Response -->
+        <ee:transform doc:name="Return Summary to Spring">
+    <ee:message>
+        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    purchaseId: vars.purchaseId,
+    prescriptionId: vars.prescriptionId,
+    patientId: vars.patientId,
+    payableItems: vars.summary.payableItems,
+    totalAmount: vars.summary.totalAmount,
+    status: "PENDING"
+}
+]]></ee:set-payload>
+    </ee:message>
+</ee:transform>
+
+
+    </flow>
+
+</mule>

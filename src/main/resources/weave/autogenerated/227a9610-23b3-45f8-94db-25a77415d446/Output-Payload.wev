@@ -1,0 +1,8 @@
+%dw 2.0
+
+type auto_227a9610_23b3_45f8_94db_25a77415d446_Output_Payload = {|
+  prescriptionId: Any, 
+  patientId: Any, 
+  validation: Array<Nothing>
+|}
+
