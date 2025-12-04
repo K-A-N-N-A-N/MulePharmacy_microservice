@@ -122,5 +122,66 @@ output application/json
 
 
     </flow>
+	<flow name="pharmacy_confirmPayment" doc:id="e092be22-d473-47c2-adfb-3013fa8b22d7" >
+		<http:listener doc:name="Listener" doc:id="ce6be98d-873f-4910-9d62-94ea292e6972" config-ref="HTTP_Listener_config" path="/pharmacy/confirm-payment/{purchaseId}" outputMimeType="application/json" allowedMethods="POST"/>
+		<set-variable value="#[attributes.uriParams.purchaseId]" doc:name="Set Variable" doc:id="af0eeb4d-326a-4d1e-a8b0-fe5ebe1adfd8" variableName="purchaseId"/>
+		<db:select doc:name="Select" doc:id="29936741-15da-4909-8945-f06ea0c6520f" config-ref="pharmacy_service">
+			<db:sql ><![CDATA[SELECT * FROM pharmacy_purchase_log WHERE purchase_id = :purchaseId
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	purchaseId: vars.purchaseId
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="4867c163-4eba-4a51-9e39-4b1f03dd1f6d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+var row = payload[0] default {}
+var stored = read(row.response_payload default "{}", "application/json")
+---
+{
+    payableItems: stored.payableItems default [],
+    totalAmount: stored.totalAmount default 0
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[payload.payableItems]" doc:name="Set Variable" doc:id="a81ceb4e-c48a-4e14-8be9-1ea557bea23e" variableName="payableItems"/>
+		<set-variable value="#[payload.totalAmount]" doc:name="Set Variable" doc:id="24ab688d-4b63-4e6b-a17a-16d7287373b4" variableName="totalAmount"/>
+		<foreach doc:name="For Each" doc:id="1b6f030c-d21f-4e5f-a944-9c2edfec7069" collection="#[payload.payableItems]">
+			<db:update doc:name="Update" doc:id="455ab1c0-6d16-4dcf-a558-6a05129ce0f1" config-ref="pharmacy_service">
+				<db:sql ><![CDATA[UPDATE pharmacy_medicines
+SET stock = stock - :qty
+WHERE sku = :sku
+]]></db:sql>
+				<db:input-parameters ><![CDATA[#[{
+	sku: payload.sku,
+	qty: payload.quantity,
+}]]]></db:input-parameters>
+			</db:update>
+		</foreach>
+		<db:update doc:name="Update" doc:id="3fd1a6ef-de68-4b8b-9cc7-c541d9014336" config-ref="pharmacy_service">
+			<db:sql ><![CDATA[UPDATE pharmacy_purchase_log
+SET status = 'COMPLETED'
+WHERE purchase_id = :purchaseId
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	purchaseId: vars.purchaseId
+}]]]></db:input-parameters>
+		</db:update>
+		<ee:transform doc:name="Transform Message" doc:id="f4aed9bd-4eda-49bd-a49e-d4fd7dee2084" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    purchaseId: vars.purchaseId,
+    status: "COMPLETED",
+    payableItems: vars.payableItems,
+    totalAmount: vars.totalAmount
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+
 
 </mule>
