@@ -9,15 +9,15 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 
     <!-- GET ALL (unchanged) -->
     <flow name="pharmacy_public_GetAll">
-        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all"/>
-        <db:select config-ref="pharmacy_service">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all" doc:name="Get All Medicine Listener"/>
+        <db:select config-ref="pharmacy_service" doc:name="Select All medicine">
             <db:sql><![CDATA[
                 SELECT sku, name, brand, unit, strength, price, stock, active
                 FROM pharmacy_medicines
                 WHERE active = true;
             ]]></db:sql>
         </db:select>
-        <ee:transform>
+        <ee:transform doc:name="Return Medicines">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -30,8 +30,8 @@ payload
 
     <!-- GET LITE by SKU (unchanged) -->
     <flow name="pharmacy_public_GetBySkuID">
-        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/sku/{sku}/lite"/>
-        <db:select config-ref="pharmacy_service">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/sku/{sku}/lite" doc:name="Get specific Medicine Listener"/>
+        <db:select config-ref="pharmacy_service" doc:name="Select Med by SKU">
             <db:sql><![CDATA[
                 SELECT sku, name, brand, price, stock
                 FROM pharmacy_medicines
@@ -39,7 +39,7 @@ payload
             ]]></db:sql>
             <db:input-parameters><![CDATA[#[{ sku: attributes.uriParams.sku }]]]></db:input-parameters>
         </db:select>
-        <ee:transform>
+        <ee:transform doc:name="Return Medicine">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -52,10 +52,10 @@ output application/json
 
     <!-- VALIDATE PRESCRIPTION -->
     <flow name="pharmacy_ValidationFlow" doc:id="227a9610-23b3-45f8-94db-25a77415d446">
-        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/validate-prescription" outputMimeType="application/json" allowedMethods="POST"/>
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/validate-prescription" outputMimeType="application/json" allowedMethods="POST" doc:name="Validate Prescription Listener"/>
 
         <!-- Normalize payload -->
-        <ee:transform>
+        <ee:transform doc:name="Normalize payload">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -66,15 +66,15 @@ payload
         </ee:transform>
 
         <!-- VARIABLES -->
-        <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]"/>
-        <set-variable value="#[payload.patientId]" doc:name="Set Variable" doc:id="b7f0dc7c-1f99-40f7-b196-c9a1cf960514" variableName="patientId" mimeType="application/java"/>
-		<set-variable variableName="items" value="#[payload.items]"/>
-        <set-variable variableName="results" value="#[[]]"/>
-        <set-variable variableName="i" value="#[0]"/>
+        <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]" doc:name="Prescription ID"/>
+        <set-variable value="#[payload.patientId]" doc:name="Patient ID" doc:id="b7f0dc7c-1f99-40f7-b196-c9a1cf960514" variableName="patientId" mimeType="application/java"/>
+		<set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
+        <set-variable variableName="results" value="#[[]]" doc:name="Initialize Results"/>
+        <set-variable variableName="i" value="#[0]" doc:name="i Counter"/>
 
         <!-- FOR EACH -->
         <foreach collection="#[vars.items]">
-            <db:select config-ref="pharmacy_service">
+            <db:select config-ref="pharmacy_service" doc:name="Select Med based on SKU">
                 <db:sql><![CDATA[
                     SELECT sku, name, brand, price, stock
                     FROM pharmacy_medicines
@@ -86,7 +86,7 @@ payload
             </db:select>
 
             <!-- Transform each item -->
-            <ee:transform>
+            <ee:transform doc:name="Validation Logic">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -127,14 +127,14 @@ else do {
             </ee:transform>
 
             <!-- Append to results -->
-            <set-variable variableName="results" value="#[vars.results ++ [payload]]"/>
+            <set-variable variableName="results" value="#[vars.results ++ [payload]]" doc:name="Store Results"/>
 
             <!-- INCREMENT COUNTER -->
-            <set-variable variableName="i" value="#[vars.i + 1]"/>
+            <set-variable variableName="i" value="#[vars.i + 1]" doc:name="increment i Counter"/>
         </foreach>
 
         <!-- FINAL RESPONSE -->
-        <ee:transform>
+        <ee:transform doc:name="Return Summary">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json

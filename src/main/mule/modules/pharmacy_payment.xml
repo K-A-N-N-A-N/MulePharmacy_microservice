@@ -36,15 +36,15 @@ payload
         </ee:transform>
 
         <!-- 3. Extract variables -->
-        <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]"/>
-        <set-variable variableName="patientId" value="#[payload.patientId]"/>
-        <set-variable variableName="items" value="#[payload.items]"/>
+        <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]" doc:name="Prescription ID"/>
+        <set-variable variableName="patientId" value="#[payload.patientId]" doc:name="Patient ID"/>
+        <set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
 
         <!-- 4. Call existing validation flow -->
-        <flow-ref name="pharmacy_ValidationFlow" doc:id="114ed8e0-de65-4ef6-b2ad-f9b624615816"/>
+        <flow-ref name="pharmacy_ValidationFlow" doc:id="114ed8e0-de65-4ef6-b2ad-f9b624615816" doc:name="Validate Prescription Items"/>
 
         <!-- 5. Filter AVAILABLE items -->
-<ee:transform doc:name="Transform Message" doc:id="0769c2b3-8187-48cd-b2fe-0d9ccf06e7c6" >
+<ee:transform doc:name="Filter Available Items" doc:id="0769c2b3-8187-48cd-b2fe-0d9ccf06e7c6" >
     <ee:message >
         <ee:set-payload ><![CDATA[%dw 2.0
 output application/java
@@ -56,7 +56,7 @@ validated filter ((item) -> item.status == "AVAILABLE")
 </ee:transform>
 		
 		<!-- 6. Compute totals -->
-<ee:transform doc:name="Transform Message" doc:id="132528ba-4d9b-4bb7-97e5-ac3b046079fe" >
+<ee:transform doc:name="Calculate Total Amount" doc:id="132528ba-4d9b-4bb7-97e5-ac3b046079fe" >
     <ee:message >
         <ee:set-payload ><![CDATA[%dw 2.0
 output application/java
@@ -80,8 +80,8 @@ var items =
 </ee:transform>
 		
 		<!-- 7. Create purchaseId -->
-		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="2328c722-eb7a-48b4-ba8d-1a60473952f4" variableName="summary"/>
-		<set-variable variableName="purchaseId" value="#[uuid()]"/>
+		<set-variable value="#[payload]" doc:name="Load Summary" doc:id="2328c722-eb7a-48b4-ba8d-1a60473952f4" variableName="summary"/>
+		<set-variable variableName="purchaseId" value="#[uuid()]" doc:name="Purchase ID"/>
 
         <!-- 8. Insert summary into DB -->
         <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service">
@@ -123,16 +123,16 @@ output application/json
 
     </flow>
 	<flow name="pharmacy_confirmPayment" doc:id="e092be22-d473-47c2-adfb-3013fa8b22d7" >
-		<http:listener doc:name="Listener" doc:id="ce6be98d-873f-4910-9d62-94ea292e6972" config-ref="HTTP_Listener_config" path="/pharmacy/confirm-payment/{purchaseId}" outputMimeType="application/json" allowedMethods="POST"/>
-		<set-variable value="#[attributes.uriParams.purchaseId]" doc:name="Set Variable" doc:id="af0eeb4d-326a-4d1e-a8b0-fe5ebe1adfd8" variableName="purchaseId"/>
-		<db:select doc:name="Select" doc:id="29936741-15da-4909-8945-f06ea0c6520f" config-ref="pharmacy_service">
+		<http:listener doc:name="Confirm Payment Listener" doc:id="ce6be98d-873f-4910-9d62-94ea292e6972" config-ref="HTTP_Listener_config" path="/pharmacy/confirm-payment/{purchaseId}" outputMimeType="application/json" allowedMethods="POST"/>
+		<set-variable value="#[attributes.uriParams.purchaseId]" doc:name="Purchase ID" doc:id="af0eeb4d-326a-4d1e-a8b0-fe5ebe1adfd8" variableName="purchaseId"/>
+		<db:select doc:name="Get Details from Purchase ID" doc:id="29936741-15da-4909-8945-f06ea0c6520f" config-ref="pharmacy_service">
 			<db:sql ><![CDATA[SELECT * FROM pharmacy_purchase_log WHERE purchase_id = :purchaseId
 ]]></db:sql>
 			<db:input-parameters ><![CDATA[#[{
 	purchaseId: vars.purchaseId
 }]]]></db:input-parameters>
 		</db:select>
-		<ee:transform doc:name="Transform Message" doc:id="4867c163-4eba-4a51-9e39-4b1f03dd1f6d" >
+		<ee:transform doc:name="Get Payable Items &amp; Amount" doc:id="4867c163-4eba-4a51-9e39-4b1f03dd1f6d" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/java
@@ -145,10 +145,10 @@ var stored = read(row.response_payload default "{}", "application/json")
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<set-variable value="#[payload.payableItems]" doc:name="Set Variable" doc:id="a81ceb4e-c48a-4e14-8be9-1ea557bea23e" variableName="payableItems"/>
-		<set-variable value="#[payload.totalAmount]" doc:name="Set Variable" doc:id="24ab688d-4b63-4e6b-a17a-16d7287373b4" variableName="totalAmount"/>
+		<set-variable value="#[payload.payableItems]" doc:name="Payable Items" doc:id="a81ceb4e-c48a-4e14-8be9-1ea557bea23e" variableName="payableItems"/>
+		<set-variable value="#[payload.totalAmount]" doc:name="Total Amount" doc:id="24ab688d-4b63-4e6b-a17a-16d7287373b4" variableName="totalAmount"/>
 		<foreach doc:name="For Each" doc:id="1b6f030c-d21f-4e5f-a944-9c2edfec7069" collection="#[payload.payableItems]">
-			<db:update doc:name="Update" doc:id="455ab1c0-6d16-4dcf-a558-6a05129ce0f1" config-ref="pharmacy_service">
+			<db:update doc:name="Update Stock For each Item" doc:id="455ab1c0-6d16-4dcf-a558-6a05129ce0f1" config-ref="pharmacy_service">
 				<db:sql ><![CDATA[UPDATE pharmacy_medicines
 SET stock = stock - :qty
 WHERE sku = :sku
@@ -159,7 +159,7 @@ WHERE sku = :sku
 }]]]></db:input-parameters>
 			</db:update>
 		</foreach>
-		<db:update doc:name="Update" doc:id="3fd1a6ef-de68-4b8b-9cc7-c541d9014336" config-ref="pharmacy_service">
+		<db:update doc:name="Update purchase_log" doc:id="3fd1a6ef-de68-4b8b-9cc7-c541d9014336" config-ref="pharmacy_service">
 			<db:sql ><![CDATA[UPDATE pharmacy_purchase_log
 SET status = 'COMPLETED'
 WHERE purchase_id = :purchaseId
@@ -168,7 +168,7 @@ WHERE purchase_id = :purchaseId
 	purchaseId: vars.purchaseId
 }]]]></db:input-parameters>
 		</db:update>
-		<ee:transform doc:name="Transform Message" doc:id="f4aed9bd-4eda-49bd-a49e-d4fd7dee2084" >
+		<ee:transform doc:name="Return Summary to Spring" doc:id="f4aed9bd-4eda-49bd-a49e-d4fd7dee2084" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
