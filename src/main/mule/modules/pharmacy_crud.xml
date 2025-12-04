@@ -15,15 +15,28 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 	<db:config name="pharmacy_service" doc:name="Database Config" doc:id="cbcb674c-b45a-42f8-b60c-fc30f4e583cb" >
 		<db:my-sql-connection host="127.0.0.1" port="3306" user="root" password="Kannan@3807" database="pharmacy_service" />
 	</db:config>
-	<flow name="pharmacy_Create" doc:id="9c6d494e-e3cd-4c8a-84d7-42c69e78b9af">
-		<http:listener doc:name="Create Medicine" doc:id="034bc8f8-d733-4b86-9d8d-a3cf801eb26f" config-ref="HTTP_Listener_config" path="/pharmacy/medicines" outputMimeType="application/json" allowedMethods="POST" />
-		<set-variable value="#[uuid()]" doc:name="Set Variable" doc:id="4aa32814-4849-4e8e-bf28-f175fe3482a5" variableName="id" />
-		<db:insert doc:name="Insert" doc:id="716a0f27-f3a6-482b-88ff-55d5b20f4c49" config-ref="pharmacy_service">
-			<db:sql><![CDATA[INSERT INTO pharmacy_medicines
+	<flow name="pharmacy_Create" doc:id="74c3cda5-c0cf-4149-b058-33ccdc1aa0e0">
+    <http:listener doc:name="Create Medicine" doc:id="aa408d39-624c-4403-bf87-31a0491ba832" config-ref="HTTP_Listener_config" path="/pharmacy/medicines" outputMimeType="application/json" allowedMethods="POST" />
+    
+    <!-- Add this transform to normalize the JSON payload -->
+    <ee:transform doc:name="Normalize Payload">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+    
+    <set-variable value="#[uuid()]" doc:name="Set Variable" doc:id="c7d35609-b6c5-496f-b97c-03fe06c0f6cd" variableName="id" />
+    
+    <db:insert doc:name="Insert" doc:id="7c06bfdf-8340-41e9-872c-85a83ba8da74" config-ref="pharmacy_service">
+        <db:sql><![CDATA[INSERT INTO pharmacy_medicines
 (id, sku, name, brand, unit, strength, price, stock, active)
 VALUES (:id, :sku, :name, :brand, :unit, :strength, :price, :stock, true)
 ]]></db:sql>
-			<db:input-parameters><![CDATA[{
+        <db:input-parameters><![CDATA[#[{
     id: vars.id,
     sku: payload.sku,
     name: payload.name,
@@ -32,18 +45,23 @@ VALUES (:id, :sku, :name, :brand, :unit, :strength, :price, :stock, true)
     strength: payload.strength,
     price: payload.price,
     stock: payload.stock
-  }]]></db:input-parameters>
-			<db:auto-generated-keys-column-indexes />
-		</db:insert>
-		<ee:transform doc:name="Transform Message" doc:id="51a15baa-ac79-4b6a-8ef7-cdde57944b25">
-			<ee:message>
-				<ee:set-payload><![CDATA[%dw 2.0
-output text/plain
+}]]]></db:input-parameters>
+        <db:auto-generated-keys-column-indexes />
+    </db:insert>
+    
+    <ee:transform doc:name="Transform Message" doc:id="d33dc75d-f89e-4a38-bcd4-4e7147aaade1">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
 ---
-"Medicine Created Successfully"]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-	</flow>
+{
+    message: "Medicine Created Successfully",
+    id: vars.id,
+    sku: payload.sku
+}]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+</flow>
 	<flow name="pharmacy_read" doc:id="a7d39b3c-627f-4caa-aa8e-844b9ff8561d">
 		<http:listener doc:name="Listener" doc:id="c3067f36-8aef-4ec6-815b-9851716609e9" config-ref="HTTP_Listener_config" path="/pharmacy/medicines/all" outputMimeType="application/json" allowedMethods="GET" />
 		<db:select doc:name="Select" doc:id="9ef8b4b0-d725-4c4d-97cc-e7de5fd86923" config-ref="pharmacy_service">
