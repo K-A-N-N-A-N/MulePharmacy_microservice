@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<flow name="db-init-flowFlow" doc:id="fbc846dc-55c7-4ff2-b669-ee45fbd0ccc9">
+		<db:execute-script doc:name="Execute script" doc:id="06c412a7-a80e-436d-9042-0d0149ec0104" config-ref="pharmacy_service" file="C:\Users\hp\AnypointStudio\studio-workspace\pharmacy_microservice\src\main\resources\db\init\01_create_tables.sql"/>
+		<logger level="INFO" doc:name="Logger" doc:id="f7c180ac-24bf-40e4-b1eb-f3126029abbe" message="Pharmacy DB initialized successfully!"/>
+	</flow>
+</mule>

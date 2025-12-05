@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="56862187-1ccd-4c2c-a0d0-eff7b67146cc" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<db:config name="hospital_management" doc:name="Database Config" doc:id="7d62edf4-4002-4ec7-a0a3-3047c6d5ab07" >
+		<db:my-sql-connection host="127.0.0.1" port="3306" user="root" password="Kannan@3807" database="hospital_management" />
+	</db:config>
+	<db:config name="pharmacy_service" doc:name="Database Config" doc:id="cbcb674c-b45a-42f8-b60c-fc30f4e583cb" >
+		<db:my-sql-connection host="127.0.0.1" port="3306" user="root" password="Kannan@3807" database="pharmacy_service" />
+	</db:config>
+	<flow name="pharmacy_Create" doc:id="74c3cda5-c0cf-4149-b058-33ccdc1aa0e0">
+    <http:listener doc:name="Create Medicine Listener" doc:id="aa408d39-624c-4403-bf87-31a0491ba832" config-ref="HTTP_Listener_config" path="/pharmacy/medicines" outputMimeType="application/json" allowedMethods="POST" />
+    
+    <!-- Add this transform to normalize the JSON payload -->
+    <ee:transform doc:name="Normalize Payload">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+    
+    <set-variable value="#[uuid()]" doc:name="UUID()" doc:id="c7d35609-b6c5-496f-b97c-03fe06c0f6cd" variableName="id" />
+    
+    <db:insert doc:name="Insert Medicine" doc:id="7c06bfdf-8340-41e9-872c-85a83ba8da74" config-ref="pharmacy_service">
+        <db:sql><![CDATA[INSERT INTO pharmacy_medicines
+(id, sku, name, brand, unit, strength, price, stock, active)
+VALUES (:id, :sku, :name, :brand, :unit, :strength, :price, :stock, true)
+]]></db:sql>
+        <db:input-parameters><![CDATA[#[{
+    id: vars.id,
+    sku: payload.sku,
+    name: payload.name,
+    brand: payload.brand,
+    unit: payload.unit,
+    strength: payload.strength,
+    price: payload.price,
+    stock: payload.stock
+}]]]></db:input-parameters>
+        <db:auto-generated-keys-column-indexes />
+    </db:insert>
+    
+    <ee:transform doc:name="Return Success Message" doc:id="d33dc75d-f89e-4a38-bcd4-4e7147aaade1">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    message: "Medicine Created Successfully",
+    id: vars.id,
+    sku: payload.sku
+}]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+</flow>
+	<flow name="pharmacy_read" doc:id="a7d39b3c-627f-4caa-aa8e-844b9ff8561d">
+		<http:listener doc:name="Get All Med Listener" doc:id="c3067f36-8aef-4ec6-815b-9851716609e9" config-ref="HTTP_Listener_config" path="/pharmacy/medicines/all" outputMimeType="application/json" allowedMethods="GET" />
+		<db:select doc:name="Select all Medicine" doc:id="9ef8b4b0-d725-4c4d-97cc-e7de5fd86923" config-ref="pharmacy_service">
+			<db:sql><![CDATA[SELECT * FROM pharmacy_medicines WHERE active = true;
+]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Return All Medicine" doc:id="16b93fbc-48d6-469d-87f0-73b7f3ac7cf7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="pharmacy_update" doc:id="8cd39f51-bb1b-40c0-8fcf-7d0223084835">
+		<http:listener doc:name="Update Medicine Lisetner" doc:id="d2898621-7670-4507-8fdf-2e62202d638d" config-ref="HTTP_Listener_config" path="/pharmacy/medicines/{id}" outputMimeType="application/json" allowedMethods="PUT" />
+		<db:update doc:name="Update Medicine" doc:id="26f7aea6-f5ec-410a-8ff7-a3a7c701d08b" config-ref="pharmacy_service">
+			<db:sql><![CDATA[UPDATE pharmacy_medicines
+SET
+    sku = :sku,
+    name = :name,
+    brand = :brand,
+    unit = :unit,
+    strength = :strength,
+    price = :price,
+    stock = :stock
+WHERE id = :id AND active = true;
+]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+    id: attributes.uriParams.id,
+    sku: payload.sku,
+    name: payload.name,
+    brand: payload.brand,
+    unit: payload.unit,
+    strength: payload.strength,
+    price: payload.price,
+    stock: payload.stock
+  }]]]></db:input-parameters>
+		</db:update>
+		<ee:transform doc:name="Return Success Message" doc:id="3b1245fa-1c0f-4f9e-8e37-5920d4047a92">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+"Medicine updated successfully"
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="pharmacy_delete" doc:id="95b147e1-b0e2-46a4-90e8-44bcdd0b6fcb" >
+		<http:listener doc:name="Delete Medicine Listener" doc:id="bd4ed5cd-2ee9-40a0-a0b7-719dcd227183" config-ref="HTTP_Listener_config" path="/pharmacy/medicines/{id}" outputMimeType="application/json" allowedMethods="UPDATE,DELETE"/>
+		<db:update doc:name="Soft Delete Medicine based on ID" doc:id="f18029a6-c904-4ebf-b9fe-5cb63953399a" config-ref="pharmacy_service">
+			<db:sql ><![CDATA[UPDATE pharmacy_medicines
+SET active = false
+WHERE id = :id;
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+    id: attributes.uriParams.id
+  }]]]></db:input-parameters>
+		</db:update>
+		<ee:transform doc:name="Return Success Message" doc:id="22fea896-4795-4b31-aada-e64989c10ba3" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+"Medicine deleted successfully"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="pharmacy_getByID" doc:id="dd7b03f0-05eb-41df-ab19-9256888dc69a" >
+		<http:listener doc:name="GET by ID Listener" doc:id="bdac6d04-74cf-4649-baea-868d733d11a5" config-ref="HTTP_Listener_config" path="/pharmacy/medicines/{id}"/>
+		<db:select doc:name="Select Med Based on ID" doc:id="54b3bb33-2039-4f41-9d22-f77ed119a546" config-ref="pharmacy_service" transactionalAction="NOT_SUPPORTED">
+			<db:sql ><![CDATA[SELECT *
+FROM pharmacy_medicines
+WHERE id = :id AND active = true;]]></db:sql>
+			<db:parameter-types />
+			<db:input-parameters ><![CDATA[#[{
+        id: attributes.uriParams.id
+    }]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Return Medicine" doc:id="1ccb9c1e-1054-430e-9ecf-5fc1d431ec39" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

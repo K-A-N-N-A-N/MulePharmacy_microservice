@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+    xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <!-- 1. DB CONNECTIVITY ERROR  -->
+    <flow name="handle-db-connectivity-error" doc:id="fd68e191-6c33-47fd-b5de-5e24373f8f5d">
+        <logger level="ERROR" doc:name="Log Connectivity Error" doc:id="53f8da74-697d-4597-9eab-0cfb74696a6c" message='#["Database connectivity error: " ++ error.description]'/>
+        <ee:transform doc:name="Set Error Response" doc:id="057476a8-ec7d-45d6-b413-a6a1664199f0">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "error": "Database Unavailable",
+    "message": "Service temporarily unavailable. Please try again later.",
+    "timestamp": now()
+}]]></ee:set-payload>
+                <ee:set-attributes><![CDATA[%dw 2.0
+output application/java
+---
+{
+    statusCode: 503,
+    reasonPhrase: "Service Unavailable"
+}]]></ee:set-attributes>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- 2. DB QUERY EXECUTION ERROR -->
+    <flow name="handle-db-query-error" doc:id="5aaa2aac-dfdf-4dba-8007-869d998cf90c">
+        <logger level="ERROR" doc:name="Log Query Error" message='#["Database query error: " ++ error.description]'/>
+        <ee:transform doc:name="Set Error Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "error": "Query Execution Failed",
+    "message": error.description,
+    "timestamp": now()
+}]]></ee:set-payload>
+                <ee:set-attributes><![CDATA[%dw 2.0
+output application/java
+---
+{
+    statusCode: 500,
+    reasonPhrase: "Internal Server Error"
+}]]></ee:set-attributes>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- 3. TRANSFORMATION ERROR -->
+    <flow name="handle-transformation-error" doc:id="f32dd375-a351-4302-a242-34647629910e">
+        <logger level="ERROR" doc:name="Log Transformation Error" message='#["Transformation error: " ++ error.description]'/>
+        <ee:transform doc:name="Set Error Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "error": "Data Transformation Failed",
+    "message": "Unable to process response format",
+    "timestamp": now()
+}]]></ee:set-payload>
+                <ee:set-attributes><![CDATA[%dw 2.0
+output application/java
+---
+{
+    statusCode: 500,
+    reasonPhrase: "Internal Server Error"
+}]]></ee:set-attributes>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- 4. NOT FOUND ERROR -->
+    <flow name="handle-not-found-error" doc:id="d05ba937-2669-47ec-bdd8-f57bbc0fa8df">
+        <logger level="WARN" doc:name="Log Not Found" message='#["Resource not found: " ++ error.description]'/>
+        <ee:transform doc:name="Set Error Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "error": "Resource Not Found",
+    "message": error.description default "The requested resource was not found",
+    "timestamp": now()
+}]]></ee:set-payload>
+                <ee:set-attributes><![CDATA[%dw 2.0
+output application/java
+---
+{
+    statusCode: 404,
+    reasonPhrase: "Not Found"
+}]]></ee:set-attributes>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- 5. BAD REQUEST ERROR -->
+    <flow name="handle-bad-request-error" doc:id="07f8a5f7-4678-46e0-a185-d69466c0c5e7">
+        <logger level="WARN" doc:name="Log Bad Request" message='#["Bad request: " ++ error.description]'/>
+        <ee:transform doc:name="Set Error Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "error": "Bad Request",
+    "message": error.description default "Invalid request parameters",
+    "timestamp": now()
+}]]></ee:set-payload>
+                <ee:set-attributes><![CDATA[%dw 2.0
+output application/java
+---
+{
+    statusCode: 400,
+    reasonPhrase: "Bad Request"
+}]]></ee:set-attributes>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <!-- 6. GENERIC ERROR (CATCH-ALL) -->
+    <flow name="handle-generic-error" doc:id="9950c6e6-893f-4519-b463-6307574cf6af">
+        <logger level="ERROR" doc:name="Log Generic Error" message='#["Unexpected error: " ++ error.description]'/>
+        <ee:transform doc:name="Set Error Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "error": "Internal Server Error",
+    "message": error.description default "An unexpected error occurred",
+    "errorType": error.errorType.identifier,
+    "timestamp": now()
+}]]></ee:set-payload>
+                <ee:set-attributes><![CDATA[%dw 2.0
+output application/java
+---
+{
+    statusCode: 500,
+    reasonPhrase: "Internal Server Error"
+}]]></ee:set-attributes>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+</mule>

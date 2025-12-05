@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+    xmlns:http="http://www.mulesoft.org/schema/mule/http"
+    xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <!-- GET ALL -->
+    <flow name="pharmacy_public_GetAll">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all" doc:name="Get All Medicine Listener"/>
+        <db:select config-ref="pharmacy_service" doc:name="Select All medicine">
+            <db:sql><![CDATA[
+                SELECT sku, name, brand, unit, strength, price, stock, active
+                FROM pharmacy_medicines
+                WHERE active = true;
+            ]]></db:sql>
+        </db:select>
+        <ee:transform doc:name="Return Medicines">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <!-- ERROR HANDLER -->
+        <error-handler>
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
+        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
+        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
+        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
+        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    </on-error-continue>
+</error-handler>
+    </flow>
+
+    <!-- GET LITE by SKU -->
+    <flow name="pharmacy_public_GetBySkuID">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/sku/{sku}/lite" doc:name="Get specific Medicine Listener"/>
+        <db:select config-ref="pharmacy_service" doc:name="Select Med by SKU">
+            <db:sql><![CDATA[
+                SELECT sku, name, brand, price, stock
+                FROM pharmacy_medicines
+                WHERE sku = :sku AND active = true;
+            ]]></db:sql>
+            <db:input-parameters><![CDATA[#[{ sku: attributes.uriParams.sku }]]]></db:input-parameters>
+        </db:select>
+        <choice doc:name="Check if Medicine Found">
+    <when expression="#[isEmpty(payload)]">
+        <raise-error type="APP:NOT_FOUND" description="Medicine with the provided SKU not found" doc:name="Raise Not Found Error"/>
+    </when>
+</choice>
+        <ee:transform doc:name="Return Medicine">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+(payload default [])[0]
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <error-handler>
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Not Found Error" type="APP:NOT_FOUND">
+        <flow-ref doc:name="Handle Not Found" name="handle-not-found-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
+        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
+        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
+        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
+        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    </on-error-continue>
+</error-handler>
+    
+</flow>
+
+    <!-- VALIDATE PRESCRIPTION -->
+	<flow name="pharmacy_ValidationFlow" doc:id="e4084baa-03ef-4fe2-b03b-9c3b25f1279d">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/validate-prescription" outputMimeType="application/json" allowedMethods="POST" doc:name="Validate Prescription Listener"/>
+
+        <!-- Normalize payload -->
+        <ee:transform doc:name="Normalize payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <!-- VARIABLES -->
+        <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]" doc:name="Prescription ID"/>
+        <set-variable value="#[payload.patientId]" doc:name="Patient ID" doc:id="3527e7e3-de12-47c0-9cd2-f9257914a9f7" variableName="patientId" mimeType="application/java"/>
+        <set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
+        <set-variable variableName="results" value="#[[]]" doc:name="Initialize Results"/>
+        <set-variable variableName="i" value="#[0]" doc:name="i Counter"/>
+
+        <!-- FOR EACH -->
+        <foreach collection="#[vars.items]">
+            <db:select config-ref="pharmacy_service" doc:name="Select Med based on SKU">
+                <db:sql><![CDATA[
+                    SELECT sku, name, brand, price, stock
+                    FROM pharmacy_medicines
+                    WHERE sku = :sku AND active = true;
+                ]]></db:sql>
+                <db:input-parameters><![CDATA[#[{
+                    sku: payload.sku
+                }]]]></db:input-parameters>
+            </db:select>
+
+            <!-- Transform each item -->
+            <ee:transform doc:name="Validation Logic">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+
+var itemInput = payload default []
+var requestItem = vars.items[vars.i]
+
+---
+if (isEmpty(itemInput)) 
+    {
+        sku: requestItem.sku,
+        requestedQuantity: requestItem.quantity,
+        status: "MEDICINE_NOT_FOUND"
+    }
+else do {
+    var db = itemInput[0]
+    ---
+    if (db.stock >= requestItem.quantity)
+        {
+            sku: db.sku,
+            name: db.name,
+            brand: db.brand,
+            price: db.price,
+            stock: db.stock,
+            requestedQuantity: requestItem.quantity,
+            status: "AVAILABLE"
+        }
+    else
+        {
+            sku: db.sku,
+            stock: db.stock,
+            requestedQuantity: requestItem.quantity,
+            status: "OUT_OF_STOCK"
+        }
+}
+]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+
+            <!-- Append to results -->
+            <set-variable variableName="results" value="#[vars.results ++ [payload]]" doc:name="Store Results"/>
+
+            <!-- INCREMENT COUNTER -->
+            <set-variable variableName="i" value="#[vars.i + 1]" doc:name="increment i Counter"/>
+        </foreach>
+
+        <!-- FINAL RESPONSE -->
+        <ee:transform doc:name="Return Summary">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    prescriptionId: vars.prescriptionId,
+    patientId: vars.patientId,
+    validation: vars.results
+}
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <error-handler>
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
+        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
+        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
+        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Expression Error" type="MULE:EXPRESSION">
+        <flow-ref doc:name="Handle Bad Request" name="handle-bad-request-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
+        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    </on-error-continue>
+</error-handler>
+
+    </flow>
+
+</mule>

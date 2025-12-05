@@ -1,0 +1,9 @@
+%dw 2.0
+
+type auto_b9775f3c_0743_427f_83bf_b740d4d3b760_Output_Payload = {|
+  error: String, 
+  message: String, 
+  timestamp: DateTime, 
+  errorType: String | Null
+|}
+
