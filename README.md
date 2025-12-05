@@ -1,17 +1,17 @@
-# 💊 Pharmacy Microservice — Project Documentation
+# Pharmacy Microservice — Project Documentation
 
-## 📘 Project Overview
+##  Project Overview
 The **Pharmacy Microservice** is a MuleSoft-based integration service that manages medicine inventory, prescription validation, payment processing, and communication with the main Hospital Management System (Spring Boot).  
 It ensures accurate stock handling, reliable validation, and secure pharmacy transaction processing.
 
-## 🎯 Objectives
+## Objectives
 - Manage pharmacy inventory and pricing.
 - Validate prescription medicines against available stock.
 - Generate payment summaries and confirm purchases.
 - Log all pharmacy transactions for audit and tracking.
 - Provide clean public APIs for the HMS to consume.
 
-## ⚙️ Tech Stack
+## Tech Stack
 | Layer | Technology |
 |-------|-------------|
 | Integration | MuleSoft 4.x (Anypoint Studio 7.x) |
@@ -19,7 +19,7 @@ It ensures accurate stock handling, reliable validation, and secure pharmacy tra
 | Backend Services | Mule Flows / Connectors |
 | API Style | REST |
 
-## 🧩 Core Modules
+## Core Modules
 
 ### Medicine Management
 - Create, read, update, soft-delete medicines.
@@ -55,40 +55,35 @@ It ensures accurate stock handling, reliable validation, and secure pharmacy tra
   - Not-found errors  
   - Bad request errors  
   - Generic unexpected errors  
-- Ensures consistent and readable error responses across all APIs.
+  - Ensures consistent and readable error responses across all APIs.
 
-## 🗄️ Database Tables
+##  Database Overview
 
-### pharmacy_medicines
-| Field | Description |
-|--------|-------------|
-| id | UUID primary key |
-| sku | Unique medicine SKU |
-| name | Medicine name |
-| brand | Brand name |
-| unit | Form (tablet, syrup, etc.) |
-| strength | Strength |
-| price | Unit price |
-| stock | Available quantity |
-| active | Soft delete flag |
-| created_at | Auto timestamp |
-| updated_at | Auto timestamp |
-| version | Optimistic locking version |
+### **pharmacy_medicines**
+Stores all medicine-related information including SKU, name, brand, unit, strength, price, stock levels, active status, and timestamps.  
+Used for:
+- Validating prescription items  
+- Returning public medicine data  
+- Updating stock during payment confirmation  
+- Internal CRUD operations  
 
-### pharmacy_purchase_log
-| Field | Description |
-|--------|-------------|
-| id | UUID primary key |
-| purchase_id | Reference for payment flow |
-| patient_id | Patient identifier |
-| prescription_id | Prescription reference |
-| request_payload | Original items |
-| response_payload | Summary of payable items |
-| status | PENDING / COMPLETED |
-| error_message | For error logging |
-| created_at | Auto timestamp |
+### **pharmacy_purchase_log**
+Stores all pharmacy transaction entries such as purchase IDs, patient and prescription references, request/response payloads, payment summaries, status (PENDING/COMPLETED), and timestamps.  
+Used for:
+- Recording pending payment summaries  
+- Tracking completed purchases  
+- Supporting audit and debugging  
 
-## 🧬 Architecture Overview
+## ER Diagram (Structure)
+![Pharmacy Microservice ER Diagram](Pharmacy_ERdiagram.png)
+https://app.eraser.io/workspace/cxAtkiqagNdXu86jwOpI?origin=share
+
+## High-Level Architecture (HLD)
+
+![Pharmacy MicroService High Level Diagram](Pharmacy_HLD.png)
+https://app.eraser.io/workspace/G1FpZ0VcmBZ7wLS3OPpA?origin=share
+
+## Architecture Overview
 The microservice exposes REST endpoints through Mule flows, interacts with MySQL for inventory and transaction records, and is fully integrated with the Hospital Management System.  
 Core responsibilities include medicine management, validation, billing, and stock updates.
 
