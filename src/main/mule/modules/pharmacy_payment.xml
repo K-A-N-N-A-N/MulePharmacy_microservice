@@ -120,6 +120,27 @@ output application/json
     </ee:message>
 </ee:transform>
 
+<error-handler>
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
+        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
+        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
+        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Expression Error" type="MULE:EXPRESSION">
+        <flow-ref doc:name="Handle Bad Request" name="handle-bad-request-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
+        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    </on-error-continue>
+</error-handler>
 
     </flow>
 	<flow name="pharmacy_confirmPayment" doc:id="e092be22-d473-47c2-adfb-3013fa8b22d7" >
@@ -132,6 +153,13 @@ output application/json
 	purchaseId: vars.purchaseId
 }]]]></db:input-parameters>
 		</db:select>
+		
+		<choice doc:name="Check if Purchase Found">
+    <when expression="#[isEmpty(payload)]">
+        <raise-error type="APP:NOT_FOUND" description="Purchase ID not found or invalid" doc:name="Raise Purchase Not Found Error"/>
+    </when>
+</choice>
+		
 		<ee:transform doc:name="Get Payable Items &amp; Amount" doc:id="4867c163-4eba-4a51-9e39-4b1f03dd1f6d" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -181,6 +209,29 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		
+		<error-handler>
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Not Found Error" type="APP:NOT_FOUND">
+        <flow-ref doc:name="Handle Not Found" name="handle-not-found-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
+        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
+        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
+        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
+        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    </on-error-continue>
+</error-handler>
+		
 	</flow>
 
 

@@ -7,7 +7,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
-    <!-- GET ALL (unchanged) -->
+    <!-- GET ALL -->
     <flow name="pharmacy_public_GetAll">
         <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all" doc:name="Get All Medicine Listener"/>
         <db:select config-ref="pharmacy_service" doc:name="Select All medicine">
@@ -26,9 +26,28 @@ payload
 ]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+        
+        <!-- ERROR HANDLER -->
+        <error-handler>
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
+        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
+        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
+        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
+        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    </on-error-continue>
+</error-handler>
     </flow>
 
-    <!-- GET LITE by SKU (unchanged) -->
+    <!-- GET LITE by SKU -->
     <flow name="pharmacy_public_GetBySkuID">
         <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/sku/{sku}/lite" doc:name="Get specific Medicine Listener"/>
         <db:select config-ref="pharmacy_service" doc:name="Select Med by SKU">
@@ -39,6 +58,11 @@ payload
             ]]></db:sql>
             <db:input-parameters><![CDATA[#[{ sku: attributes.uriParams.sku }]]]></db:input-parameters>
         </db:select>
+        <choice doc:name="Check if Medicine Found">
+    <when expression="#[isEmpty(payload)]">
+        <raise-error type="APP:NOT_FOUND" description="Medicine with the provided SKU not found" doc:name="Raise Not Found Error"/>
+    </when>
+</choice>
         <ee:transform doc:name="Return Medicine">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -48,10 +72,33 @@ output application/json
 ]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-    </flow>
+        
+        <error-handler>
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Not Found Error" type="APP:NOT_FOUND">
+        <flow-ref doc:name="Handle Not Found" name="handle-not-found-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
+        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
+        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
+        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
+        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    </on-error-continue>
+</error-handler>
+    
+</flow>
 
     <!-- VALIDATE PRESCRIPTION -->
-    <flow name="pharmacy_ValidationFlow" doc:id="227a9610-23b3-45f8-94db-25a77415d446">
+	<flow name="pharmacy_ValidationFlow" doc:id="e4084baa-03ef-4fe2-b03b-9c3b25f1279d">
         <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/validate-prescription" outputMimeType="application/json" allowedMethods="POST" doc:name="Validate Prescription Listener"/>
 
         <!-- Normalize payload -->
@@ -67,8 +114,8 @@ payload
 
         <!-- VARIABLES -->
         <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]" doc:name="Prescription ID"/>
-        <set-variable value="#[payload.patientId]" doc:name="Patient ID" doc:id="b7f0dc7c-1f99-40f7-b196-c9a1cf960514" variableName="patientId" mimeType="application/java"/>
-		<set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
+        <set-variable value="#[payload.patientId]" doc:name="Patient ID" doc:id="3527e7e3-de12-47c0-9cd2-f9257914a9f7" variableName="patientId" mimeType="application/java"/>
+        <set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
         <set-variable variableName="results" value="#[[]]" doc:name="Initialize Results"/>
         <set-variable variableName="i" value="#[0]" doc:name="i Counter"/>
 
@@ -147,8 +194,29 @@ output application/json
 ]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+        
+        <error-handler>
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
+        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
+        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
+        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Expression Error" type="MULE:EXPRESSION">
+        <flow-ref doc:name="Handle Bad Request" name="handle-bad-request-error"/>
+    </on-error-continue>
+    
+    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
+        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    </on-error-continue>
+</error-handler>
 
     </flow>
-
 
 </mule>

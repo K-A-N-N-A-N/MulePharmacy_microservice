@@ -1,0 +1,11 @@
+{
+  "sampleData": {
+    "58447354-17a1-4312-85dc-5c1ed9d6b485": {
+      "payload": "sample_data/defaultstringtype.dwl",
+      "attributes": "sample_data/defaultnumbertype.dwl"
+    },
+    "79fe8e58-6c6b-4e29-8d88-9f7acfced4e0": {
+      "attributes": "sample_data/defaultstringtype_1.dwl"
+    }
+  }
+}
