@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
-    xmlns:http="http://www.mulesoft.org/schema/mule/http"
-    xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+    xmlns:db="http://www.mulesoft.org/schema/mule/db"
+    xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
 
     <!-- GET ALL -->
     <flow name="pharmacy_public_GetAll">
@@ -58,11 +59,8 @@ payload
             ]]></db:sql>
             <db:input-parameters><![CDATA[#[{ sku: attributes.uriParams.sku }]]]></db:input-parameters>
         </db:select>
-        <choice doc:name="Check if Medicine Found">
-    <when expression="#[isEmpty(payload)]">
-        <raise-error type="APP:NOT_FOUND" description="Medicine with the provided SKU not found" doc:name="Raise Not Found Error"/>
-    </when>
-</choice>
+        <set-variable value="#[(payload default [])[0].sku]" doc:name="Store SKU value from DB" doc:id="fa71f701-6f15-4010-b988-4414aff4ec00" variableName="FOUND"/>
+		<validation:is-not-null doc:name="Raise SKU not Found Error" doc:id="faae10ec-42e0-4c04-a5d2-c7186083efee" config-ref="Validation_Config" value="#[vars.FOUND]" message="SKU ID not found or invalid"/>
         <ee:transform doc:name="Return Medicine">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -74,9 +72,6 @@ output application/json
         </ee:transform>
         
         <error-handler>
-    <on-error-continue enableNotifications="true" logException="true" doc:name="Not Found Error" type="APP:NOT_FOUND">
-        <flow-ref doc:name="Handle Not Found" name="handle-not-found-error"/>
-    </on-error-continue>
     
     <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
         <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
