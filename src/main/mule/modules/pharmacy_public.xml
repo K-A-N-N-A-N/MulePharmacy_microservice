@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-    xmlns:db="http://www.mulesoft.org/schema/mule/db"
-    xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+    xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+    xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
-http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/tracing/current/mule-tracing.xsd">
 
     <!-- GET ALL -->
-    <flow name="pharmacy_public_GetAll">
+    <configuration doc:name="Configuration" doc:id="00ac35e1-24be-4636-a221-d420537adaf4" correlationIdGeneratorExpression="#[uuid() replace '-' with '#']" />
+	<flow name="pharmacy_public_GetAll">
         <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all" doc:name="Get All Medicine Listener"/>
         <db:select config-ref="pharmacy_service" doc:name="Select All medicine">
             <db:sql><![CDATA[
@@ -18,7 +20,8 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
                 WHERE active = true;
             ]]></db:sql>
         </db:select>
-        <ee:transform doc:name="Return Medicines">
+        <logger level="INFO" doc:name="Select Debug" doc:id="5f2720d6-2bef-49e6-9664-3e85994a957c" message="DB Select Query Completed Successfully."/>
+		<ee:transform doc:name="Return Medicines">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -92,8 +95,11 @@ payload
         <set-variable variableName="i" value="#[0]" doc:name="i Counter"/>
 
         <!-- FOR EACH -->
-        <foreach collection="#[vars.items]">
-            <db:select config-ref="pharmacy_service" doc:name="Select Med based on SKU">
+        <logger level="INFO" doc:name="Log Original Correlation ID" doc:id="0a14c00f-c3e1-4996-a5b6-fa8102b2e22c" message="Original Correlation ID : #[correlationId]"/>
+		<foreach collection="#[vars.items]">
+            <tracing:with-correlation-id doc:name="With CorrelationID" doc:id="e6d1985e-e093-4bc0-993b-c270ceed75f8" correlationId="#[correlationId ++ vars.prescriptionId ++ vars.i]">
+				<logger level="INFO" doc:name="Updated Correclation ID" doc:id="5cb6be29-ff96-4796-b62a-fa3c19fcd5f3" message="Updated Correclation ID : #[correlationId]"/>
+				<db:select config-ref="pharmacy_service" doc:name="Select Med based on SKU">
                 <db:sql><![CDATA[
                     SELECT sku, name, brand, price, stock
                     FROM pharmacy_medicines
@@ -103,9 +109,7 @@ payload
                     sku: payload.sku
                 }]]]></db:input-parameters>
             </db:select>
-
-            <!-- Transform each item -->
-            <ee:transform doc:name="Validation Logic">
+				<ee:transform doc:name="Validation Logic">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -144,12 +148,15 @@ else do {
 ]]></ee:set-payload>
                 </ee:message>
             </ee:transform>
+				<set-variable variableName="results" value="#[vars.results ++ [payload]]" doc:name="Store Results" />
+				<set-variable variableName="i" value="#[vars.i + 1]" doc:name="increment i Counter" />
+			</tracing:with-correlation-id>
+
+            <!-- Transform each item -->
 
             <!-- Append to results -->
-            <set-variable variableName="results" value="#[vars.results ++ [payload]]" doc:name="Store Results"/>
 
             <!-- INCREMENT COUNTER -->
-            <set-variable variableName="i" value="#[vars.i + 1]" doc:name="increment i Counter"/>
         </foreach>
 
         <!-- FINAL RESPONSE -->
