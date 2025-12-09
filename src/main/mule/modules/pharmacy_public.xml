@@ -30,22 +30,11 @@ payload
         
         <!-- ERROR HANDLER -->
         <error-handler>
-    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
-        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
-        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
-        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
-        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    <on-error-continue type="ANY">
+        <flow-ref name="global-master-error-handler" doc:name="Call Global Master Error Handler"/>
     </on-error-continue>
 </error-handler>
+
     </flow>
 
     <!-- GET LITE by SKU -->
@@ -72,23 +61,11 @@ output application/json
         </ee:transform>
         
         <error-handler>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
-        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
-        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
-        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
-        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    <on-error-continue type="ANY">
+        <flow-ref name="global-master-error-handler" doc:name="Call Global Master Error Handler"/>
     </on-error-continue>
 </error-handler>
+
     
 </flow>
 
@@ -191,24 +168,8 @@ output application/json
         </ee:transform>
         
         <error-handler>
-    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Connectivity Error" type="DB:CONNECTIVITY">
-        <flow-ref doc:name="Handle DB Connectivity" name="handle-db-connectivity-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="DB Query Error" type="DB:QUERY_EXECUTION">
-        <flow-ref doc:name="Handle DB Query Error" name="handle-db-query-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="Transformation Error" type="MULE:TRANSFORMATION">
-        <flow-ref doc:name="Handle Transformation Error" name="handle-transformation-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="Expression Error" type="MULE:EXPRESSION">
-        <flow-ref doc:name="Handle Bad Request" name="handle-bad-request-error"/>
-    </on-error-continue>
-    
-    <on-error-continue enableNotifications="true" logException="true" doc:name="Generic Error" type="ANY">
-        <flow-ref doc:name="Handle Generic Error" name="handle-generic-error"/>
+    <on-error-continue type="ANY">
+        <flow-ref name="global-master-error-handler" doc:name="Call Global Master Error Handler"/>
     </on-error-continue>
 </error-handler>
 

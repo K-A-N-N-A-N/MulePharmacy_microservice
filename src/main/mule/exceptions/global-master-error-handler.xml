@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	
+
+<!-- ========================= -->
+<!--   CENTRAL ERROR ROUTER    -->
+<!-- ========================= -->
+<sub-flow name="global-master-error-handler">
+
+    <choice>
+
+        <!-- DB Connectivity -->
+        <when expression="#[error.errorType.identifier == 'DB:CONNECTIVITY']">
+            <flow-ref name="handle-db-connectivity-error" doc:name="DB Connectivity Error"/>
+        </when>
+
+        <!-- DB Query Execution -->
+        <when expression="#[error.errorType.identifier == 'DB:QUERY_EXECUTION']">
+            <flow-ref name="handle-db-query-error" doc:name="DB Query Error"/>
+        </when>
+
+        <!-- Transformation Failure -->
+        <when expression="#[error.errorType.identifier == 'MULE:TRANSFORMATION']">
+            <flow-ref name="handle-transformation-error" doc:name="Transformation Errors"/>
+        </when>
+
+        <!-- Expression/Bad Request -->
+        <when expression="#[error.errorType.identifier == 'MULE:EXPRESSION']">
+            <flow-ref name="handle-bad-request-error" doc:name="Bad Request 404 Error"/>
+        </when>
+
+        <!-- Not Found -->
+        <when expression="#[error.errorType.identifier == 'HTTP:NOT_FOUND']">
+            <flow-ref name="handle-not-found-error" doc:name="Not Found Error"/>
+        </when>
+
+        <!-- Fallback / Unknown Errors -->
+        <otherwise>
+            <flow-ref name="handle-generic-error" doc:name="Generic Errors"/>
+        </otherwise>
+
+    </choice>
+
+</sub-flow>
+	
+
+	</mule>
