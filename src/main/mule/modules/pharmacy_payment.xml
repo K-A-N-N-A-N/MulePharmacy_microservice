@@ -86,7 +86,7 @@ var items =
 		<set-variable variableName="purchaseId" value="#[uuid()]" doc:name="Purchase ID"/>
 
         <!-- 8. Insert summary into DB -->
-        <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service">
+        <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service" doc:id="491a4d9b-8701-4425-9b3e-b22be2e79a62">
             <db:sql><![CDATA[
 INSERT INTO pharmacy_purchase_log
 (id, purchase_id, patient_id, prescription_id, request_payload, response_payload, status)

@@ -12,8 +12,8 @@ http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/
     <!-- GET ALL -->
     <configuration doc:name="Configuration" doc:id="00ac35e1-24be-4636-a221-d420537adaf4" correlationIdGeneratorExpression="#[uuid() replace '-' with '#']" />
 	<flow name="pharmacy_public_GetAll">
-        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all" doc:name="Get All Medicine Listener"/>
-        <db:select config-ref="pharmacy_service" doc:name="Select All medicine">
+        <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/public/all" doc:name="Get All Medicine Listener" allowedMethods="GET"/>
+        <db:select config-ref="pharmacy_service" doc:name="Select All medicine" doc:id="f1ed412c-469e-4090-93a6-905af78a812f">
             <db:sql><![CDATA[
                 SELECT sku, name, brand, unit, strength, price, stock, active
                 FROM pharmacy_medicines
@@ -43,7 +43,7 @@ payload
     <!-- GET LITE by SKU -->
     <flow name="pharmacy_public_GetBySkuID">
         <http:listener config-ref="HTTP_Listener_config" path="/pharmacy/medicines/sku/{sku}/lite" doc:name="Get specific Medicine Listener"/>
-        <db:select config-ref="pharmacy_service" doc:name="Select Med by SKU">
+        <db:select config-ref="pharmacy_service" doc:name="Select Med by SKU" doc:id="9d4b9a6a-65da-402d-9d56-487cd28d219b">
             <db:sql><![CDATA[
                 SELECT sku, name, brand, price, stock
                 FROM pharmacy_medicines
