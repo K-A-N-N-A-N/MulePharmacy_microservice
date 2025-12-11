@@ -1,20 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" 
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" 
+      xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
       xmlns:db="http://www.mulesoft.org/schema/mule/db"
-      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-      xmlns:http="http://www.mulesoft.org/schema/mule/http" 
-      xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
         http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
 
     
     <validation:config name="Validation_Config" doc:name="Validation Config" doc:id="5c149144-af4b-4228-bd6f-4780542022a0" />
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="f89df3ae-0348-4fd0-a689-36017f736744" >
+		<jms:active-mq-connection specification="JMS_1_0_2b" username="admin" password="admin" >
+			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+		</jms:active-mq-connection>
+	</jms:config>
 	<flow name="pharmacy_paymentFlow" doc:id="0780238c-16d7-4d8b-8612-62a2a916acd0">
 
         <!-- 1. Listener -->
@@ -40,7 +46,9 @@ payload
         <!-- 3. Extract variables -->
         <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]" doc:name="Prescription ID"/>
         <set-variable variableName="patientId" value="#[payload.patientId]" doc:name="Patient ID"/>
-        <set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
+        <set-variable value="#[payload.patientName]" doc:name="Patient Name" doc:id="ef81c525-29f2-42c0-981a-c7910b6ab4cd" variableName="patientName"/>
+		<set-variable value="#[payload.patientEmail]" doc:name="Patient Email" doc:id="9b07c17f-b3a6-4a45-b898-6d5f3b076344" variableName="patientEmail"/>
+		<set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
 
         <!-- 4. Call existing validation flow -->
         <flow-ref name="pharmacy_ValidationFlow" doc:id="ca3209e8-9fe1-4e57-a11b-a807af345d33" doc:name="Validate Prescription Items"/>
@@ -87,17 +95,18 @@ var items =
 
         <!-- 8. Insert summary into DB -->
         <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service" doc:id="491a4d9b-8701-4425-9b3e-b22be2e79a62">
-            <db:sql><![CDATA[
-INSERT INTO pharmacy_purchase_log
-(id, purchase_id, patient_id, prescription_id, request_payload, response_payload, status)
+            <db:sql><![CDATA[INSERT INTO pharmacy_purchase_log
+(id, purchase_id, patient_id, patient_name, patient_email, prescription_id, request_payload, response_payload, status)
 VALUES
-(:id, :purchaseId, :patientId, :prescriptionId, :req, :res, 'PENDING')
-            ]]></db:sql>
+(:id, :purchaseId, :patientId, :patientName, :patientEmail, :prescriptionId, :req, :res, 'PENDING')
+]]></db:sql>
 
             <db:input-parameters><![CDATA[#[{
     id: uuid(),
     purchaseId: vars.purchaseId,
     patientId: vars.patientId,
+    patientName: vars.patientName,
+    patientEmail: vars.patientEmail,
     prescriptionId: vars.prescriptionId,
     req: write(vars.items, 'application/json'),
     res: write(vars.summary, 'application/json')
@@ -144,6 +153,8 @@ output application/json
 		<set-variable value="#[payload.purchase_id]" doc:name="Store purchaseID from the DB" doc:id="d2eff1b4-f51a-4fe2-b69e-64fbe5acd55d" variableName="FOUND"/>
 		<validation:is-not-null doc:name="Raise Invalid Purchase ID" doc:id="8641910f-893f-463e-b83f-3aff3f1312d9" config-ref="Validation_Config" value="#[vars.FOUND]" message="Purchase ID not found or invalid"/>
 		
+		<set-variable value="#[payload.patient_name]" doc:name="Patient Name" doc:id="fc0c71b2-4c24-495a-9caf-f479648d2257" variableName="patientName"/>
+		<set-variable value="#[payload.patient_email]" doc:name="Patient Email" doc:id="bd6805a8-959b-4a66-84de-37ed42539c9a" variableName="patientEmail"/>
 		<ee:transform doc:name="Get Payable Items &amp; Amount" doc:id="cbb49a7a-9af2-4138-b294-1ae8868dc2fa" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -178,6 +189,23 @@ WHERE purchase_id = :purchaseId]]></db:sql>
 	purchaseId: vars.purchaseId
 }]]]></db:input-parameters>
 		</db:update>
+		<jms:publish doc:name="Publish Message to ActiveMq" doc:id="0ec3cdbc-ae4f-4312-8b88-3d797f7d2a7d" config-ref="JMS_Config" destination="pharmacy.payment.completed">
+			<jms:message>
+				<jms:body><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+    purchaseId: vars.purchaseId,
+    patientId: vars.patientId,
+    patientName: vars.patientName,
+    patientEmail: vars.patientEmail,
+    payableItems: vars.payableItems,
+    totalAmount: vars.totalAmount,
+    status: "COMPLETED"
+}]]]></jms:body>
+			</jms:message>
+		</jms:publish>
+		<logger level="INFO" doc:name="Log ActiveMQ" doc:id="d68cb2b6-cb09-4737-9b02-74a81b094de0" message="ActiveMQ Message Published"/>
 		<ee:transform doc:name="Return Summary to Spring" doc:id="1df6583b-d062-4902-ac29-acc19d890bde" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -191,7 +219,6 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		
 		<error-handler>
     <on-error-continue type="ANY">
         <flow-ref name="global-master-error-handler" doc:name="Call Global Master Error Handler"/>
