@@ -7,7 +7,7 @@ payload must equalTo({
   "validation": [
     {
       "sku": "PARA650",
-      "stock": 290,
+      "stock": 190,
       "requestedQuantity": 5000,
       "status": "OUT_OF_STOCK"
     },
@@ -16,7 +16,7 @@ payload must equalTo({
       "name": "Ibuprofen",
       "brand": "Brufen",
       "price": 12.5,
-      "stock": 200,
+      "stock": 180,
       "requestedQuantity": 2,
       "status": "AVAILABLE"
     }

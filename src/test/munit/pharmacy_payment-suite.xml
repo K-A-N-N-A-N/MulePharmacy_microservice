@@ -44,89 +44,66 @@ assert_expression_payload::main({payload: payload, attributes: attributes, vars:
 			</munit-tools:assert>
 		</munit:validation>
 	</munit:test>
-	<munit:test name="pharmacy_confirmPayment-test" doc:id="cceb0625-7b61-4916-a1a9-bf32bef78397" >
+	<munit:test name="pharmacy_confirmPayment-test" doc:id="09b928ab-effd-44f9-a18e-16bf28b64356" >
 		<munit:behavior >
-			<munit-tools:mock-when doc:name="Mock Update purchase_log" doc:id="c7be5540-cc39-48a9-b2ab-2437778b8423" processor="db:update">
+			<munit-tools:mock-when doc:name="Mock Get Details from Purchase ID" doc:id="f4453236-7e6d-40d9-9773-ddd67f0a9489" processor="db:select">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="009fa53a-fd58-44d6-95eb-b242202d2c1b" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_payload3.dwl')]" mediaType="application/java" encoding="UTF-8" />
+					<munit-tools:variables >
+						<munit-tools:variable key="purchaseId" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_16.dwl')]" mediaType="application/java" encoding="UTF-8" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock Update purchase_log" doc:id="7619f8a5-dd03-4a23-89cd-4b4a9eb6fec4" processor="db:update">
 				<munit-tools:with-attributes >
 					<munit-tools:with-attribute whereValue="04901552-a1e4-4528-8d98-841281ccb92d" attributeName="doc:id" />
 				</munit-tools:with-attributes>
 				<munit-tools:then-return >
-					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_payload.dwl')]" mediaType="application/java" encoding="UTF-8" />
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_payload4.dwl')]" mediaType="application/java" encoding="UTF-8" />
 					<munit-tools:variables >
-						<munit-tools:variable key="purchaseId" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_.dwl')]" mediaType="application/java" encoding="UTF-8" />
-						<munit-tools:variable key="payableItems" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_1.dwl')]" mediaType="application/java" encoding="UTF-8" />
-						<munit-tools:variable key="totalAmount" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_2.dwl')]" mediaType="application/java" encoding="UTF-8" />
-						<munit-tools:variable key="FOUND" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_3.dwl')]" mediaType="application/java" encoding="UTF-8" />
+						<munit-tools:variable key="purchaseId" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_17.dwl')]" mediaType="application/java" encoding="UTF-8" />
+						<munit-tools:variable key="payableItems" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_18.dwl')]" mediaType="application/java" encoding="UTF-8" />
+						<munit-tools:variable key="totalAmount" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_19.dwl')]" mediaType="application/java" encoding="UTF-8" />
+						<munit-tools:variable key="FOUND" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_20.dwl')]" mediaType="application/java" encoding="UTF-8" />
 					</munit-tools:variables>
 				</munit-tools:then-return>
 			</munit-tools:mock-when>
-			<munit-tools:mock-when doc:name="Mock Update Stock For each Item" doc:id="eea290b7-8597-43e6-bd70-640cd26e43c4" processor="db:update">
+			<munit-tools:mock-when doc:name="Mock Update Stock For each Item" doc:id="52707a05-6d8b-488e-9595-002a786bac1d" processor="db:update">
 				<munit-tools:with-attributes >
 					<munit-tools:with-attribute whereValue="7acc12da-1e12-47ab-811e-fb02d4042185" attributeName="doc:id" />
 				</munit-tools:with-attributes>
-				<munit-tools:then-call flow="mock-db:update" />
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_payload5.dwl')]" mediaType="application/java" encoding="UTF-8" />
+					<munit-tools:variables >
+						<munit-tools:variable key="payableItems" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_21.dwl')]" mediaType="application/java" encoding="UTF-8" />
+						<munit-tools:variable key="purchaseId" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_22.dwl')]" mediaType="application/java" encoding="UTF-8" />
+						<munit-tools:variable key="rootMessage" value="#[readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_23.dwl')]" />
+						<munit-tools:variable key="totalAmount" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_24.dwl')]" mediaType="application/java" encoding="UTF-8" />
+						<munit-tools:variable key="counter" value="#[readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_25.dwl')]" />
+						<munit-tools:variable key="FOUND" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_26.dwl')]" mediaType="application/java" encoding="UTF-8" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
 			</munit-tools:mock-when>
-			<munit:set-event doc:name="Set Input" doc:id="7fa18daf-c0df-4baa-8061-ef3d8c7b809c" >
-				<munit:payload value="#[output application/json --- readUrl('classpath://pharmacyconfirmPaymenttest\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
-				<munit:attributes value="#[readUrl('classpath://pharmacyconfirmPaymenttest\set-event_attributes.dwl')]" />
+			<munit:set-event doc:name="Set Input" doc:id="27126e33-fa34-4cf5-95a5-2d3930b7984d" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://pharmacyconfirmPaymenttest\set-event_payload1.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://pharmacyconfirmPaymenttest\set-event_attributes1.dwl')]" />
 			</munit:set-event>
 		</munit:behavior>
 		<munit:execution >
-			<flow-ref doc:name="Flow-ref to pharmacy_confirmPayment" doc:id="8473359e-def4-4004-9a0b-270e62e304f5" name="pharmacy_confirmPayment"/>
+			<flow-ref doc:name="Flow-ref to pharmacy_confirmPayment" doc:id="ba9614b4-f07c-4340-b11c-760bcc914eaa" name="pharmacy_confirmPayment"/>
 		</munit:execution>
 		<munit:validation >
-			<munit-tools:assert doc:name="Assert payload" doc:id="39b6ad67-7a7b-4af0-8f04-feebc639e287" message="The payload does not match">
+			<munit-tools:assert doc:name="Assert payload" doc:id="33594235-40e0-4125-a5f0-9daf73539368" message="The payload does not match">
 				<munit-tools:that ><![CDATA[#[%dw 2.0
-import pharmacyconfirmPaymenttest::assert_expression_payload
+import pharmacyconfirmPaymenttest::assert_expression_payload1
 ---
-assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+assert_expression_payload1::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
 			</munit-tools:assert>
 		</munit:validation>
 	</munit:test>
-	<flow name="mock-db:update" doc:id="8e8ddce6-f378-4d1c-9dc3-8aa39deccbc4" >
-		<try doc:name="Try" doc:id="66d760e8-2e28-4ebb-b55e-e437408b3d56" >
-			<munit-tools:retrieve doc:name="Retrieve" doc:id="464ccc93-b95a-46ea-adc0-e6486e28ca5d" key="Mock Update Stock For each Item"/>
-			<error-handler >
-				<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="fc0ab8a1-87a0-46c3-a821-88613f7a3e1f" type="ANY">
-					<set-payload value="#[1]" doc:name="Set Payload" doc:id="58338738-f393-4941-bf25-e7b3ab994154" />
-				</on-error-continue>
-			</error-handler>
-		</try>
-		<munit-tools:store doc:name="Store" doc:id="34746d5f-60a3-4d38-baeb-eb815a4d565c" key="Mock Update Stock For each Item">
-			<munit-tools:value ><![CDATA[#[payload + 1]]]></munit-tools:value>
-		</munit-tools:store>
-		<choice doc:name="Choice" doc:id="25578d42-db6a-45c1-9ae5-d3c33f0daf99" >
-			<when expression="#[payload == 1]">
-				<munit:set-event doc:name="Set Event" doc:id="87d1e9db-6780-4d00-8efa-615df3fd8a5e" >
-					<munit:payload value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_payload1.dwl')]" encoding="UTF-8" mediaType="application/java" />
-					<munit:variables >
-						<munit:variable key="payableItems" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_4.dwl')]" encoding="UTF-8" mediaType="application/java" />
-						<munit:variable key="purchaseId" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_5.dwl')]" encoding="UTF-8" mediaType="application/java" />
-						<munit:variable key="rootMessage" value="#[readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_6.dwl')]" />
-						<munit:variable key="totalAmount" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_7.dwl')]" encoding="UTF-8" mediaType="application/java" />
-						<munit:variable key="counter" value="#[readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_8.dwl')]" />
-						<munit:variable key="FOUND" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_9.dwl')]" encoding="UTF-8" mediaType="application/java" />
-					</munit:variables>
-				</munit:set-event>
-			</when>
-			<when expression="#[payload == 2]">
-				<munit:set-event doc:name="Set Event" doc:id="6b7c9bc2-3f25-4f71-951a-f59a722e5920" >
-					<munit:payload value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_payload2.dwl')]" encoding="UTF-8" mediaType="application/java" />
-					<munit:variables >
-						<munit:variable key="purchaseId" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_10.dwl')]" encoding="UTF-8" mediaType="application/java" />
-						<munit:variable key="payableItems" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_11.dwl')]" encoding="UTF-8" mediaType="application/java" />
-						<munit:variable key="rootMessage" value="#[readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_12.dwl')]" />
-						<munit:variable key="totalAmount" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_13.dwl')]" encoding="UTF-8" mediaType="application/java" />
-						<munit:variable key="counter" value="#[readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_14.dwl')]" />
-						<munit:variable key="FOUND" value="#[output application/java --- readUrl('classpath://pharmacyconfirmPaymenttest\mock_variable_15.dwl')]" encoding="UTF-8" mediaType="application/java" />
-					</munit:variables>
-				</munit:set-event>
-			</when>
-			<otherwise >
-				<munit-tools:fail doc:name="Fail" doc:id="c4e92345-51db-4f7c-bd84-cb8ba0411181" message="There are no more events to mock"/>
-			</otherwise>
-		</choice>
-	</flow>
 
 
 </mule>

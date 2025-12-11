@@ -95,11 +95,8 @@ payload
         <set-variable variableName="i" value="#[0]" doc:name="i Counter"/>
 
         <!-- FOR EACH -->
-        <logger level="INFO" doc:name="Log Original Correlation ID" doc:id="0a14c00f-c3e1-4996-a5b6-fa8102b2e22c" message="Original Correlation ID : #[correlationId]"/>
 		<foreach collection="#[vars.items]">
-            <tracing:with-correlation-id doc:name="With CorrelationID" doc:id="e6d1985e-e093-4bc0-993b-c270ceed75f8" correlationId="#[correlationId ++ vars.prescriptionId ++ vars.i]">
-				<logger level="INFO" doc:name="Updated Correclation ID" doc:id="5cb6be29-ff96-4796-b62a-fa3c19fcd5f3" message="Updated Correclation ID : #[correlationId]"/>
-				<db:select config-ref="pharmacy_service" doc:name="Select Med based on SKU">
+            <db:select config-ref="pharmacy_service" doc:name="Select Med based on SKU" doc:id="ea841b33-11a8-48b5-9d23-02f9ff8dee87">
                 <db:sql><![CDATA[
                     SELECT sku, name, brand, price, stock
                     FROM pharmacy_medicines
@@ -109,7 +106,7 @@ payload
                     sku: payload.sku
                 }]]]></db:input-parameters>
             </db:select>
-				<ee:transform doc:name="Validation Logic">
+			<ee:transform doc:name="Validation Logic">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -148,9 +145,8 @@ else do {
 ]]></ee:set-payload>
                 </ee:message>
             </ee:transform>
-				<set-variable variableName="results" value="#[vars.results ++ [payload]]" doc:name="Store Results" />
-				<set-variable variableName="i" value="#[vars.i + 1]" doc:name="increment i Counter" />
-			</tracing:with-correlation-id>
+			<set-variable variableName="results" value="#[vars.results ++ [payload]]" doc:name="Store Results" />
+			<set-variable variableName="i" value="#[vars.i + 1]" doc:name="increment i Counter" />
 
             <!-- Transform each item -->
 
