@@ -1,163 +1,161 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" 
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email"
+      xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
       xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
       xmlns:db="http://www.mulesoft.org/schema/mule/db"
-      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
-      xmlns="http://www.mulesoft.org/schema/mule/core" 
-      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
         http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
-http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+        http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+        http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+        http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
 
-    
-    <validation:config name="Validation_Config" doc:name="Validation Config" doc:id="5c149144-af4b-4228-bd6f-4780542022a0" />
-	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="f89df3ae-0348-4fd0-a689-36017f736744" >
-		<jms:active-mq-connection specification="JMS_1_0_2b" username="admin" password="admin" >
-			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
-		</jms:active-mq-connection>
-	</jms:config>
-	<flow name="pharmacy_paymentFlow" doc:id="0780238c-16d7-4d8b-8612-62a2a916acd0">
+    <!-- validation config -->
+    <validation:config name="Validation_Config" doc:name="Validation Config" />
 
-        <!-- 1. Listener -->
-        <http:listener 
-            doc:name="Payment Summary Listener" 
-            config-ref="HTTP_Listener_config"
-            path="/pharmacy/payment-summary"
-            outputMimeType="application/json"
-            allowedMethods="POST"/>
+    <!-- JMS config - adjust brokerUrl or credentials if needed -->
+    <jms:config name="JMS_Config" doc:name="JMS Config">
+        <jms:active-mq-connection specification="JMS_1_0_2b" username="admin" password="admin">
+            <jms:factory-configuration brokerUrl="tcp://localhost:61616"/>
+        </jms:active-mq-connection>
+    </jms:config>
 
-        <!-- 2. Normalize Payload -->
+    <!-- Email SMTP config (STARTTLS) -->
+    <email:smtp-config name="Email_SMTP" doc:name="Email SMTP">
+        <email:smtp-connection
+            host="smtp.gmail.com"
+            port="587"
+            user="kannan3807@gmail.com"
+            password="ensf pege zbzq ygkw"
+            connectionTimeout="10000"
+            writeTimeout="10000"
+            readTimeout="10000">
+            <email:properties>
+                <email:property key="mail.smtp.starttls.enable" value="true"/>
+                <email:property key="mail.smtp.starttls.required" value="true"/>
+                <email:property key="mail.smtp.auth" value="true"/>
+            </email:properties>
+        </email:smtp-connection>
+    </email:smtp-config>
+
+    <!-- ============================= -->
+    <!--  PAYMENT SUMMARY FLOW         -->
+    <!-- (uses your global HTTP listener config) -->
+    <!-- ============================= -->
+    <flow name="pharmacy_paymentFlow" doc:id="d7455810-dbea-4032-83da-cc42bcc1db06">
+        <http:listener doc:name="Payment Summary Listener" config-ref="HTTP_Listener_config"
+                       path="/pharmacy/payment-summary" outputMimeType="application/json" allowedMethods="POST"/>
+
         <ee:transform doc:name="Normalize Payload">
-            <ee:message>
-                <ee:set-payload><![CDATA[
-%dw 2.0
+            <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 payload
-                ]]></ee:set-payload>
-            </ee:message>
+]]></ee:set-payload></ee:message>
         </ee:transform>
 
-        <!-- 3. Extract variables -->
         <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]" doc:name="Prescription ID"/>
         <set-variable variableName="patientId" value="#[payload.patientId]" doc:name="Patient ID"/>
-        <set-variable value="#[payload.patientName]" doc:name="Patient Name" doc:id="ef81c525-29f2-42c0-981a-c7910b6ab4cd" variableName="patientName"/>
-		<set-variable value="#[payload.patientEmail]" doc:name="Patient Email" doc:id="9b07c17f-b3a6-4a45-b898-6d5f3b076344" variableName="patientEmail"/>
-		<set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
+        <set-variable variableName="patientName" value="#[payload.patientName]" doc:name="Patient Name"/>
+        <set-variable variableName="patientEmail" value="#[payload.patientEmail]" doc:name="Patient Email"/>
+        <set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
 
-        <!-- 4. Call existing validation flow -->
-        <flow-ref name="pharmacy_ValidationFlow" doc:id="ca3209e8-9fe1-4e57-a11b-a807af345d33" doc:name="Validate Prescription Items"/>
+        <!-- call your existing validation flow -->
+        <flow-ref name="pharmacy_ValidationFlow" doc:name="Validate Prescription Items"/>
 
-        <!-- 5. Filter AVAILABLE items -->
-<ee:transform doc:name="Filter Available Items" doc:id="8612650c-d30e-4b35-99a9-b88d31d19578" >
-    <ee:message >
-        <ee:set-payload ><![CDATA[%dw 2.0
+        <ee:transform doc:name="Filter Available Items">
+            <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/java
 var validated = payload.validation default []
 ---
 validated filter ((item) -> item.status == "AVAILABLE")
-]]></ee:set-payload>
-    </ee:message>
-</ee:transform>
-		
-		<!-- 6. Compute totals -->
-<ee:transform doc:name="Calculate Total Amount" doc:id="31930eee-0866-452e-b5ea-3fe89e998106" >
-    <ee:message >
-        <ee:set-payload ><![CDATA[%dw 2.0
+]]></ee:set-payload></ee:message>
+        </ee:transform>
+
+        <ee:transform doc:name="Calculate Total Amount">
+            <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/java
-
-var items = 
-    if (payload is Array) payload
-    else [payload]
-
+var items = if (payload is Array) payload else [payload]
 ---
 {
-    payableItems: items map ((i) -> {
-        sku: i.sku,
-        quantity: i.requestedQuantity,
-        unitPrice: i.price,
-        lineTotal: i.price * i.requestedQuantity
-    }),
-    totalAmount: sum(items map ((i) -> i.price * i.requestedQuantity))
+  payableItems: items map (i) -> {
+    sku: i.sku,
+    quantity: i.requestedQuantity,
+    unitPrice: i.price,
+    lineTotal: i.price * i.requestedQuantity
+  },
+  totalAmount: sum(items map (i) -> i.price * i.requestedQuantity)
 }
-]]></ee:set-payload>
-    </ee:message>
-</ee:transform>
-		
-		<!-- 7. Create purchaseId -->
-		<set-variable value="#[payload]" doc:name="Load Summary" doc:id="3aa4d814-4f5a-4234-8aa4-1c8f352b348c" variableName="summary"/>
-		<set-variable variableName="purchaseId" value="#[uuid()]" doc:name="Purchase ID"/>
+]]></ee:set-payload></ee:message>
+        </ee:transform>
 
-        <!-- 8. Insert summary into DB -->
-        <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service" doc:id="491a4d9b-8701-4425-9b3e-b22be2e79a62">
-            <db:sql><![CDATA[INSERT INTO pharmacy_purchase_log
+        <set-variable variableName="summary" value="#[payload]" doc:name="Load Summary"/>
+        <set-variable variableName="purchaseId" value="#[uuid()]" doc:name="Purchase ID"/>
+
+        <!-- Insert pending purchase log - assumes pharmacy_service DB config exists -->
+        <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service">
+            <db:sql><![CDATA[
+INSERT INTO pharmacy_purchase_log
 (id, purchase_id, patient_id, patient_name, patient_email, prescription_id, request_payload, response_payload, status)
-VALUES
-(:id, :purchaseId, :patientId, :patientName, :patientEmail, :prescriptionId, :req, :res, 'PENDING')
+VALUES (:id, :purchaseId, :patientId, :patientName, :patientEmail, :prescriptionId, :req, :res, 'PENDING')
 ]]></db:sql>
-
             <db:input-parameters><![CDATA[#[{
-    id: uuid(),
-    purchaseId: vars.purchaseId,
-    patientId: vars.patientId,
-    patientName: vars.patientName,
-    patientEmail: vars.patientEmail,
-    prescriptionId: vars.prescriptionId,
-    req: write(vars.items, 'application/json'),
-    res: write(vars.summary, 'application/json')
+  id: uuid(),
+  purchaseId: vars.purchaseId,
+  patientId: vars.patientId,
+  patientName: vars.patientName,
+  patientEmail: vars.patientEmail,
+  prescriptionId: vars.prescriptionId,
+  req: write(vars.items, "application/json"),
+  res: write(vars.summary, "application/json")
 }]]]></db:input-parameters>
         </db:insert>
 
-        <!-- 9. Final Response -->
         <ee:transform doc:name="Return Summary to Spring">
-    <ee:message>
-        <ee:set-payload><![CDATA[%dw 2.0
+            <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-    purchaseId: vars.purchaseId,
-    prescriptionId: vars.prescriptionId,
-    patientId: vars.patientId,
-    payableItems: vars.summary.payableItems,
-    totalAmount: vars.summary.totalAmount,
-    status: "PENDING"
+  purchaseId: vars.purchaseId,
+  prescriptionId: vars.prescriptionId,
+  patientId: vars.patientId,
+  payableItems: vars.summary.payableItems,
+  totalAmount: vars.summary.totalAmount,
+  status: "PENDING"
 }
-]]></ee:set-payload>
-    </ee:message>
-</ee:transform>
-
-<error-handler>
-    <on-error-continue type="ANY">
-        <flow-ref name="global-master-error-handler" doc:name="Call Global Master Error Handler"/>
-    </on-error-continue>
-</error-handler>
-
-
+]]></ee:set-payload></ee:message>
+        </ee:transform>
     </flow>
-	<flow name="pharmacy_confirmPayment" doc:id="0392de02-b2b0-4b0d-9e71-47c5e522da17" >
-		<http:listener doc:name="Confirm Payment Listener" doc:id="93646c42-c994-40a8-9b2b-316707fc867b" config-ref="HTTP_Listener_config" path="/pharmacy/confirm-payment/{purchaseId}" outputMimeType="application/json" allowedMethods="POST"/>
-		<set-variable value="#[attributes.uriParams.purchaseId]" doc:name="Purchase ID" doc:id="898766ee-fb2f-4b3c-8835-56f684d982b9" variableName="purchaseId"/>
-		
-		<!-- TRY SCOPE: Fetch and Validate Purchase -->
-		<db:select doc:name="Get Details from Purchase ID" doc:id="009fa53a-fd58-44d6-95eb-b242202d2c1b" config-ref="pharmacy_service">
-				<db:sql><![CDATA[SELECT * FROM pharmacy_purchase_log WHERE purchase_id = :purchaseId]]></db:sql>
-				<db:input-parameters><![CDATA[#[{
-	purchaseId: vars.purchaseId
-}]]]></db:input-parameters>
-			</db:select>
-		<set-variable value="#[payload.purchase_id]" doc:name="Store purchaseID from the DB" doc:id="d2eff1b4-f51a-4fe2-b69e-64fbe5acd55d" variableName="FOUND"/>
-		<validation:is-not-null doc:name="Raise Invalid Purchase ID" doc:id="8641910f-893f-463e-b83f-3aff3f1312d9" config-ref="Validation_Config" value="#[vars.FOUND]" message="Purchase ID not found or invalid"/>
-		
-		<set-variable value="#[payload.patient_name]" doc:name="Patient Name" doc:id="fc0c71b2-4c24-495a-9caf-f479648d2257" variableName="patientName"/>
-		<set-variable value="#[payload.patient_email]" doc:name="Patient Email" doc:id="bd6805a8-959b-4a66-84de-37ed42539c9a" variableName="patientEmail"/>
-		<ee:transform doc:name="Get Payable Items &amp; Amount" doc:id="cbb49a7a-9af2-4138-b294-1ae8868dc2fa" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+
+    <!-- ============================= -->
+    <!--  CONFIRM PAYMENT FLOW         -->
+    <!-- ============================= -->
+    <flow name="pharmacy_confirmPayment" doc:id="a47d6952-1951-4f5c-9561-6ae6433a560d">
+        <http:listener doc:name="Confirm Payment Listener" config-ref="HTTP_Listener_config"
+                       path="/pharmacy/confirm-payment/{purchaseId}" outputMimeType="application/json" allowedMethods="POST"/>
+
+        <set-variable variableName="purchaseId" value="#[attributes.uriParams.purchaseId]" doc:name="Purchase ID"/>
+
+        <db:select doc:name="Get Details from Purchase ID" config-ref="pharmacy_service">
+            <db:sql><![CDATA[SELECT * FROM pharmacy_purchase_log WHERE purchase_id = :purchaseId]]></db:sql>
+            <db:input-parameters><![CDATA[#[{ purchaseId: vars.purchaseId }]]]></db:input-parameters>
+        </db:select>
+
+        <validation:is-not-null value="#[payload[0]]" message="Purchase ID not found or invalid"/>
+
+        <!-- extract saved patient name / email (DB columns likely patient_name / patient_email) -->
+        <set-variable variableName="patientName" value="#[payload[0].patient_name]" doc:name="Patient Name"/>
+        <set-variable variableName="patientEmail" value="#[payload[0].patient_email]" doc:name="Patient Email"/>
+
+        <ee:transform doc:name="Get Payable Items &amp; Amount">
+            <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/java
 var row = payload[0] default {}
 var stored = read(row.response_payload default "{}", "application/json")
@@ -165,36 +163,32 @@ var stored = read(row.response_payload default "{}", "application/json")
 {
     payableItems: stored.payableItems default [],
     totalAmount: stored.totalAmount default 0
-}]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<set-variable value="#[payload.payableItems]" doc:name="Payable Items" doc:id="b05c5eac-3746-4a94-a7cb-fb8f201d962c" variableName="payableItems"/>
-		<set-variable value="#[payload.totalAmount]" doc:name="Total Amount" doc:id="6896f291-5c95-412a-b061-ecd4aee0d564" variableName="totalAmount"/>
-		<foreach doc:name="For Each" doc:id="73d21756-5c1c-490d-93c4-a199dce66414" collection="#[payload.payableItems]">
-			<db:update doc:name="Update Stock For each Item" doc:id="7acc12da-1e12-47ab-811e-fb02d4042185" config-ref="pharmacy_service">
-				<db:sql ><![CDATA[UPDATE pharmacy_medicines
-SET stock = stock - :qty
-WHERE sku = :sku]]></db:sql>
-				<db:input-parameters ><![CDATA[#[{
-	sku: payload.sku,
-	qty: payload.quantity,
-}]]]></db:input-parameters>
-			</db:update>
-		</foreach>
-		<db:update doc:name="Update purchase_log" doc:id="04901552-a1e4-4528-8d98-841281ccb92d" config-ref="pharmacy_service">
-			<db:sql ><![CDATA[UPDATE pharmacy_purchase_log
-SET status = 'COMPLETED'
-WHERE purchase_id = :purchaseId]]></db:sql>
-			<db:input-parameters ><![CDATA[#[{
-	purchaseId: vars.purchaseId
-}]]]></db:input-parameters>
-		</db:update>
-		<jms:publish doc:name="Publish Message to ActiveMq" doc:id="0ec3cdbc-ae4f-4312-8b88-3d797f7d2a7d" config-ref="JMS_Config" destination="pharmacy.payment.completed">
-			<jms:message>
-				<jms:body><![CDATA[#[%dw 2.0
-output application/json
----
-{
+}
+]]></ee:set-payload></ee:message>
+        </ee:transform>
+
+        <set-variable variableName="payableItems" value="#[payload.payableItems]" doc:name="Payable Items"/>
+        <set-variable variableName="totalAmount" value="#[payload.totalAmount]" doc:name="Total Amount"/>
+
+        <foreach doc:name="For Each Item" collection="#[payload.payableItems]">
+            <db:update doc:name="Update Stock For each Item" config-ref="pharmacy_service">
+                <db:sql><![CDATA[
+UPDATE pharmacy_medicines SET stock = stock - :qty WHERE sku = :sku
+]]></db:sql>
+                <db:input-parameters><![CDATA[#[{ sku: payload.sku, qty: payload.quantity }]]]></db:input-parameters>
+            </db:update>
+        </foreach>
+
+        <db:update doc:name="Update purchase_log" config-ref="pharmacy_service">
+            <db:sql><![CDATA[UPDATE pharmacy_purchase_log SET status = 'COMPLETED' WHERE purchase_id = :purchaseId]]></db:sql>
+            <db:input-parameters><![CDATA[#[{ purchaseId: vars.purchaseId }]]]></db:input-parameters>
+        </db:update>
+
+        <!-- Publish to ActiveMQ: coerce patientName / patientEmail safely -->
+        <jms:publish config-ref="JMS_Config" destination="pharmacy.payment.completed" doc:name="Publish Message to ActiveMq">
+            <jms:message>
+                <jms:body><![CDATA[
+#[write({
     purchaseId: vars.purchaseId,
     patientId: vars.patientId,
     patientName: vars.patientName,
@@ -202,29 +196,74 @@ output application/json
     payableItems: vars.payableItems,
     totalAmount: vars.totalAmount,
     status: "COMPLETED"
-}]]]></jms:body>
-			</jms:message>
-		</jms:publish>
-		<logger level="INFO" doc:name="Log ActiveMQ" doc:id="d68cb2b6-cb09-4737-9b02-74a81b094de0" message="ActiveMQ Message Published"/>
-		<ee:transform doc:name="Return Summary to Spring" doc:id="1df6583b-d062-4902-ac29-acc19d890bde" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+}, "application/json")]
+]]></jms:body>
+            </jms:message>
+        </jms:publish>
+
+        <logger level="INFO" message="ActiveMQ Message Published for #[vars.purchaseId]" doc:name="Log ActiveMQ"/>
+
+        <ee:transform doc:name="Return Summary to Spring">
+            <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-    purchaseId: vars.purchaseId,
-    status: "COMPLETED",
-    payableItems: vars.payableItems,
-    totalAmount: vars.totalAmount
-}]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<error-handler>
-    <on-error-continue type="ANY">
-        <flow-ref name="global-master-error-handler" doc:name="Call Global Master Error Handler"/>
-    </on-error-continue>
-</error-handler>
+  purchaseId: vars.purchaseId,
+  status: "COMPLETED",
+  payableItems: vars.payableItems,
+  totalAmount: vars.totalAmount
+}
+]]></ee:set-payload></ee:message>
+        </ee:transform>
+    </flow>
 
-	</flow>
+    <!-- ============================= -->
+    <!--  EMAIL HANDLER (LISTENS JMS)  -->
+    <!-- ============================= -->
+    <flow name="pharmacy-email-handler" doc:id="4915c52b-59d2-40f7-b660-00bcd24e25a3">
+        <jms:listener config-ref="JMS_Config" destination="pharmacy.payment.completed" doc:name="Get Payload from ActiveMq">
+            <jms:consumer-type><jms:queue-consumer/></jms:consumer-type>
+        </jms:listener>
+
+        <logger level="INFO" message="Received JMS message for email: #[payload]" doc:name="Log Received message"/>
+
+        <!-- ⭐ CRITICAL FIX: Parse JSON string to Object -->
+        <ee:transform doc:name="Parse JSON Payload">
+            <ee:message><ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+read(payload, "application/json")
+]]></ee:set-payload></ee:message>
+        </ee:transform>
+
+        <!-- Prepare email: now payload is an Object, not a String -->
+        <ee:transform doc:name="Prepare Email">
+            <ee:message><ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+  to: payload.patientEmail,
+  subject: "Your Pharmacy Purchase Receipt",
+  body: 
+    "Hello " ++ payload.patientName ++ ",\n\n" ++
+    "Your payment has been successfully completed.\n\n" ++
+    "Purchase ID: " ++ payload.purchaseId ++ "\n" ++
+    "Total Amount: Rs " ++ (payload.totalAmount as String) ++ "\n\n" ++
+    "Regards,\nHospital Management System"
+}
+]]></ee:set-payload></ee:message>
+        </ee:transform>
+
+        <email:send config-ref="Email_SMTP" fromAddress="kannan3807@gmail.com" subject="#[payload.subject]" doc:name="Send Mail">
+            <email:to-addresses>
+                <email:to-address value="#[payload.to]"/>
+            </email:to-addresses>
+            <email:body contentType="text/plain">
+                <email:content><![CDATA[#[payload.body]]]></email:content>
+            </email:body>
+        </email:send>
+
+        <logger level="INFO" message="Email sent to #[payload.to]" doc:name="Logger Final Response"/>
+    </flow>
 
 </mule>
