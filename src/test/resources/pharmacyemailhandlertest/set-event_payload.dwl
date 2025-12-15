@@ -1,0 +1,1 @@
+"{\n  \"purchaseId\": \"146b753c-c930-4b46-9d2e-052c295aaffa\",\n  \"patientId\": null,\n  \"patientName\": \"Kannan\",\n  \"patientEmail\": \"kannan3807@gmail.com\",\n  \"payableItems\": [\n    {\n      \"sku\": \"PARA650\",\n      \"quantity\": 50,\n      \"lineTotal\": 775,\n      \"unitPrice\": 15.5\n    }\n  ],\n  \"totalAmount\": 775,\n  \"status\": \"COMPLETED\"\n}"

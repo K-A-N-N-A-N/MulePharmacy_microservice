@@ -100,7 +100,7 @@ var items = if (payload is Array) payload else [payload]
         <set-variable variableName="purchaseId" value="#[uuid()]" doc:name="Purchase ID"/>
 
         <!-- Insert pending purchase log - assumes pharmacy_service DB config exists -->
-        <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service">
+        <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service" doc:id="6fc43cd0-7f66-4d28-88f8-9455fab23dda">
             <db:sql><![CDATA[
 INSERT INTO pharmacy_purchase_log
 (id, purchase_id, patient_id, patient_name, patient_email, prescription_id, request_payload, response_payload, status)
@@ -143,15 +143,16 @@ output application/json
 
         <set-variable variableName="purchaseId" value="#[attributes.uriParams.purchaseId]" doc:name="Purchase ID"/>
 
-        <db:select doc:name="Get Details from Purchase ID" config-ref="pharmacy_service">
+        <db:select doc:name="Get Details from Purchase ID" config-ref="pharmacy_service" doc:id="7ec64d76-6268-4afc-9557-770bfb55d0cf">
             <db:sql><![CDATA[SELECT * FROM pharmacy_purchase_log WHERE purchase_id = :purchaseId]]></db:sql>
             <db:input-parameters><![CDATA[#[{ purchaseId: vars.purchaseId }]]]></db:input-parameters>
         </db:select>
 
-        <validation:is-not-null value="#[payload[0]]" message="Purchase ID not found or invalid"/>
+        <validation:is-not-null value="#[payload[0]]" message="Purchase ID not found or invalid" doc:name="Check Purchase ID excisting or Not"/>
 
         <!-- extract saved patient name / email (DB columns likely patient_name / patient_email) -->
-        <set-variable variableName="patientName" value="#[payload[0].patient_name]" doc:name="Patient Name"/>
+        <validation:is-true doc:name='Check Status != "COMPLETED"' doc:id="8b8aa253-f376-4a08-bc3a-6c86fded80e4" expression="#[payload[0].status != 'COMPLETED']" message="Payment already completed for this purchase ID"/>
+		<set-variable variableName="patientName" value="#[payload[0].patient_name]" doc:name="Patient Name"/>
         <set-variable variableName="patientEmail" value="#[payload[0].patient_email]" doc:name="Patient Email"/>
 
         <ee:transform doc:name="Get Payable Items &amp; Amount">
@@ -171,7 +172,7 @@ var stored = read(row.response_payload default "{}", "application/json")
         <set-variable variableName="totalAmount" value="#[payload.totalAmount]" doc:name="Total Amount"/>
 
         <foreach doc:name="For Each Item" collection="#[payload.payableItems]">
-            <db:update doc:name="Update Stock For each Item" config-ref="pharmacy_service">
+            <db:update doc:name="Update Stock For each Item" config-ref="pharmacy_service" doc:id="5675602b-4c3b-496b-b833-dbfd36e2c1dd">
                 <db:sql><![CDATA[
 UPDATE pharmacy_medicines SET stock = stock - :qty WHERE sku = :sku
 ]]></db:sql>
@@ -179,7 +180,7 @@ UPDATE pharmacy_medicines SET stock = stock - :qty WHERE sku = :sku
             </db:update>
         </foreach>
 
-        <db:update doc:name="Update purchase_log" config-ref="pharmacy_service">
+        <db:update doc:name="Update purchase_log" config-ref="pharmacy_service" doc:id="fcbd3479-3445-44f8-bd47-f635b5712752">
             <db:sql><![CDATA[UPDATE pharmacy_purchase_log SET status = 'COMPLETED' WHERE purchase_id = :purchaseId]]></db:sql>
             <db:input-parameters><![CDATA[#[{ purchaseId: vars.purchaseId }]]]></db:input-parameters>
         </db:update>
@@ -254,7 +255,7 @@ output application/java
 ]]></ee:set-payload></ee:message>
         </ee:transform>
 
-        <email:send config-ref="Email_SMTP" fromAddress="kannan3807@gmail.com" subject="#[payload.subject]" doc:name="Send Mail">
+        <email:send config-ref="Email_SMTP" fromAddress="kannan3807@gmail.com" subject="#[payload.subject]" doc:name="Send Mail" doc:id="27629eb9-0778-44fe-b1ad-df9db9fd2c86">
             <email:to-addresses>
                 <email:to-address value="#[payload.to]"/>
             </email:to-addresses>
