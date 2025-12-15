@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="pharmacy_crud-suite.xml" />
+	<munit:test name="pharmacy_read-test" doc:id="2ff81713-a9f8-47aa-a2e7-ca50a93afa15" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock Select all Medicine" doc:id="895346d7-faee-4b22-9959-2216f93ff65f" processor="db:select">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="9ef8b4b0-d725-4c4d-97cc-e7de5fd86923" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacyreadtest\mock_payload.dwl')]" mediaType="application/java" encoding="UTF-8" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Input" doc:id="3941ef9b-2c0f-4bbd-90ae-bfe805217af8" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://pharmacyreadtest\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://pharmacyreadtest\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to pharmacy_read" doc:id="3b7ea61b-e4c4-4643-afec-5212f23d878a" name="pharmacy_read"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="00555cbd-4199-41f0-ab71-966d65b07f51" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import pharmacyreadtest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="pharmacy_update-test" doc:id="2c75ae1b-0297-410a-a3b8-a691f784e4d4" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock Update Medicine" doc:id="96a6acaf-f3fc-48f9-bac1-00f50add6a40" processor="db:update">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="26f7aea6-f5ec-410a-8ff7-a3a7c701d08b" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacyupdatetest\mock_payload.dwl')]" mediaType="application/java" encoding="UTF-8" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Input" doc:id="c7476d9e-bcb7-4674-bcd4-6c48138694db" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://pharmacyupdatetest\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://pharmacyupdatetest\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to pharmacy_update" doc:id="9741af40-fc5c-4221-980f-b27c39b0dfe2" name="pharmacy_update"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="4882d31d-6a7a-4aa7-ae6c-30a9dba3eb68" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import pharmacyupdatetest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="pharmacy_delete-test" doc:id="31a982b4-dc96-47c4-87a5-28f75e33e042" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock Soft Delete Medicine based on ID" doc:id="b39f319c-da68-4e7c-8762-d827086f027d" processor="db:update">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="f18029a6-c904-4ebf-b9fe-5cb63953399a" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacydeletetest\mock_payload.dwl')]" mediaType="application/java" encoding="UTF-8" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Input" doc:id="1b9f8e14-69c9-4266-ba3d-c40614928bab" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://pharmacydeletetest\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://pharmacydeletetest\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to pharmacy_delete" doc:id="135245a7-0a67-4f81-aeb6-93465fd9d92c" name="pharmacy_delete"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="faed5deb-47f0-48fd-a98d-2ac5b3cebc0d" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import pharmacydeletetest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="pharmacy_getByID-test" doc:id="41fdd4cc-d208-471a-b5c9-88f3cd974bb0" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock Select Med Based on ID" doc:id="6eb83635-1df6-4b66-b290-0fb338c312f1" processor="db:select">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="54b3bb33-2039-4f41-9d22-f77ed119a546" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacygetByIDtest\mock_payload.dwl')]" mediaType="application/java" encoding="UTF-8" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Input" doc:id="228d6017-4a42-4ff6-be1e-7035c68a1f33" >
+				<munit:payload value="#[readUrl('classpath://pharmacygetByIDtest\set-event_payload.dwl')]" encoding="UTF-8" />
+				<munit:attributes value="#[readUrl('classpath://pharmacygetByIDtest\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to pharmacy_getByID" doc:id="c100e5e4-c2bc-46d5-91a1-2a28a083436c" name="pharmacy_getByID"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="aa4c8b32-7e65-48b1-bf2d-26fd9de5a92b" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import pharmacygetByIDtest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="pharmacy_Create-test" doc:id="7b7cc786-e3d1-4ea7-95af-4efc8ec17a4e" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock Insert Medicine" doc:id="b0a0d463-343c-4e1d-95fc-c95c0f85f05f" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="7c06bfdf-8340-41e9-872c-85a83ba8da74" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacyCreatetest\mock_payload.dwl')]" mediaType="application/java" encoding="UTF-8" />
+					<munit-tools:variables >
+						<munit-tools:variable key="id" value="#[output application/java --- readUrl('classpath://pharmacyCreatetest\mock_variable_.dwl')]" mediaType="application/java" encoding="UTF-8" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Input" doc:id="548926aa-a53d-426b-9fef-eeed623747af" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://pharmacyCreatetest\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://pharmacyCreatetest\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to pharmacy_Create" doc:id="05b51c51-7871-46c6-ad8d-875ff9eced31" name="pharmacy_Create"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="8a0e85e0-1a26-4229-89f6-877849565a7e" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import pharmacyCreatetest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>
