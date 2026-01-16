@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<definitions
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://insurance.example/ws"
+    targetNamespace="http://insurance.example/ws"
+    name="InsuranceService">
+
+	<!-- ===================== -->
+	<!--  TYPES                -->
+	<!-- ===================== -->
+	<types>
+		<xsd:schema targetNamespace="http://insurance.example/ws">
+
+			<xsd:element name="checkCoverage">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="policyId" type="xsd:string"/>
+						<xsd:element name="amount" type="xsd:decimal"/>
+					</xsd:sequence>
+				</xsd:complexType>
+			</xsd:element>
+
+			<xsd:element name="checkCoverageResponse">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="approved" type="xsd:boolean"/>
+						<xsd:element name="coveragePercentage" type="xsd:int"/>
+					</xsd:sequence>
+				</xsd:complexType>
+			</xsd:element>
+
+		</xsd:schema>
+	</types>
+
+	<!-- ===================== -->
+	<!--  MESSAGES             -->
+	<!-- ===================== -->
+	<message name="CheckCoverageRequest">
+		<part name="parameters" element="tns:checkCoverage"/>
+	</message>
+
+	<message name="CheckCoverageResponse">
+		<part name="parameters" element="tns:checkCoverageResponse"/>
+	</message>
+
+	<!-- ===================== -->
+	<!--  PORT TYPE            -->
+	<!-- ===================== -->
+	<portType name="InsurancePortType">
+		<operation name="checkCoverage">
+			<input message="tns:CheckCoverageRequest"/>
+			<output message="tns:CheckCoverageResponse"/>
+		</operation>
+	</portType>
+
+	<!-- ===================== -->
+	<!--  BINDING              -->
+	<!-- ===================== -->
+	<binding name="InsuranceSoapBinding" type="tns:InsurancePortType">
+		<soap:binding
+            style="document"
+            transport="http://schemas.xmlsoap.org/soap/http"/>
+
+		<operation name="checkCoverage">
+			<soap:operation soapAction="checkCoverage"/>
+			<input>
+				<soap:body use="literal"/>
+			</input>
+			<output>
+				<soap:body use="literal"/>
+			</output>
+		</operation>
+	</binding>
+
+	<!-- ===================== -->
+	<!--  SERVICE              -->
+	<!-- ===================== -->
+	<service name="InsuranceService">
+		<port name="InsurancePort" binding="tns:InsuranceSoapBinding">
+			<!-- SoapUI mock URL -->
+			<soap:address location="http://localhost:8089/insurance"/>
+		</port>
+	</service>
+
+</definitions>

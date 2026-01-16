@@ -145,6 +145,18 @@
 			<version>1.7.7</version>
 			<classifier>mule-plugin</classifier>
 		</dependency>
+		<dependency>
+			<groupId>com.mulesoft.connectors</groupId>
+			<artifactId>mule-kafka-connector</artifactId>
+			<version>4.12.1</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.connectors</groupId>
+			<artifactId>mule-wsc-connector</artifactId>
+			<version>2.1.1</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
 	</dependencies>
 	<repositories>
 		<repository>

@@ -1,39 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:email="http://www.mulesoft.org/schema/mule/email"
+<mule xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing"
+      xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka"
+      xmlns:email="http://www.mulesoft.org/schema/mule/email"
       xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
       xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
       xmlns:db="http://www.mulesoft.org/schema/mule/db"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
         http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
         http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
         http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
-        http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+        http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd
+http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/tracing/current/mule-tracing.xsd">
+
+	 <configuration-properties
+        doc:name="Application Properties"
+        file="application-${mule.env}.properties"/>
 
     <!-- validation config -->
     <validation:config name="Validation_Config" doc:name="Validation Config" />
-
-    <!-- JMS config - adjust brokerUrl or credentials if needed -->
-    <jms:config name="JMS_Config" doc:name="JMS Config">
-        <jms:active-mq-connection specification="JMS_1_0_2b" username="admin" password="admin">
-            <jms:factory-configuration brokerUrl="tcp://localhost:61616"/>
-        </jms:active-mq-connection>
-    </jms:config>
 
     <!-- Email SMTP config (STARTTLS) -->
     <email:smtp-config name="Email_SMTP" doc:name="Email SMTP">
         <email:smtp-connection
             host="smtp.gmail.com"
             port="587"
-            user="kannan3807@gmail.com"
-            password="ensf pege zbzq ygkw"
+            user="${email.smtp.user}"
+            password="${email.smtp.password}"
             connectionTimeout="10000"
             writeTimeout="10000"
             readTimeout="10000">
@@ -47,40 +46,73 @@
 
     <!-- ============================= -->
     <!--  PAYMENT SUMMARY FLOW         -->
-    <!-- (uses your global HTTP listener config) -->
     <!-- ============================= -->
-    <flow name="pharmacy_paymentFlow" doc:id="d7455810-dbea-4032-83da-cc42bcc1db06">
-        <http:listener doc:name="Payment Summary Listener" config-ref="HTTP_Listener_config"
-                       path="/pharmacy/payment-summary" outputMimeType="application/json" allowedMethods="POST"/>
+   <kafka:consumer-config
+        name="Apache_Kafka_Consumer_configuration"
+        doc:name="Apache Kafka Consumer configuration">
 
-        <ee:transform doc:name="Normalize Payload">
-            <ee:message><ee:set-payload><![CDATA[%dw 2.0
+    <kafka:consumer-plaintext-connection>
+        <kafka:bootstrap-servers>
+            <kafka:bootstrap-server value="localhost:9092"/>
+        </kafka:bootstrap-servers>
+
+        <kafka:topic-patterns>
+            <kafka:topic-pattern value="pharmacy.payment.completed"/>
+        </kafka:topic-patterns>
+
+    </kafka:consumer-plaintext-connection>
+
+</kafka:consumer-config>
+
+<kafka:producer-config
+        name="Apache_Kafka_Producer_configuration"
+        doc:name="Apache Kafka Producer configuration">
+
+    <kafka:producer-plaintext-connection>
+        <kafka:bootstrap-servers>
+            <kafka:bootstrap-server value="localhost:9092"/>
+        </kafka:bootstrap-servers>
+    </kafka:producer-plaintext-connection>
+
+</kafka:producer-config>
+
+
+
+	<http:listener-config name="Soap_insurance" doc:name="HTTP Listener config" doc:id="7aeb3e58-2e47-4317-a939-d3529b8a23e5" >
+		<http:listener-connection host="0.0.0.0" port="8089" />
+	</http:listener-config>
+	<flow name="pharmacy_paymentFlow" doc:id="f118a727-c3fb-429a-8609-1e6053991bee">
+    <http:listener doc:name="Payment Summary Listener" config-ref="HTTP_Listener_config"
+                   path="/pharmacy/payment-summary" outputMimeType="application/json" allowedMethods="POST"/>
+
+    <ee:transform doc:name="Normalize Payload">
+        <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 payload
 ]]></ee:set-payload></ee:message>
-        </ee:transform>
+    </ee:transform>
 
-        <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]" doc:name="Prescription ID"/>
-        <set-variable variableName="patientId" value="#[payload.patientId]" doc:name="Patient ID"/>
-        <set-variable variableName="patientName" value="#[payload.patientName]" doc:name="Patient Name"/>
-        <set-variable variableName="patientEmail" value="#[payload.patientEmail]" doc:name="Patient Email"/>
-        <set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
+    <set-variable variableName="prescriptionId" value="#[payload.prescriptionId]" doc:name="Prescription ID"/>
+    <set-variable variableName="patientId" value="#[payload.patientId]" doc:name="Patient ID"/>
+    <set-variable variableName="patientName" value="#[payload.patientName]" doc:name="Patient Name"/>
+    <set-variable variableName="patientEmail" value="#[payload.patientEmail]" doc:name="Patient Email"/>
+    <set-variable variableName="items" value="#[payload.items]" doc:name="Prescription Items"/>
 
-        <!-- call your existing validation flow -->
-        <flow-ref name="pharmacy_ValidationFlow" doc:name="Validate Prescription Items"/>
+    <!-- call your existing validation flow -->
+    <flow-ref name="pharmacy_ValidationFlow" doc:name="Validate Prescription Items"/>
 
-        <ee:transform doc:name="Filter Available Items">
-            <ee:message><ee:set-payload><![CDATA[%dw 2.0
+    <ee:transform doc:name="Filter Available Items">
+        <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/java
 var validated = payload.validation default []
 ---
 validated filter ((item) -> item.status == "AVAILABLE")
 ]]></ee:set-payload></ee:message>
-        </ee:transform>
+    </ee:transform>
 
-        <ee:transform doc:name="Calculate Total Amount">
-            <ee:message><ee:set-payload><![CDATA[%dw 2.0
+    <ee:transform doc:name="Calculate Total Amount">
+        <ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/java
 var items = if (payload is Array) payload else [payload]
 ---
@@ -94,19 +126,54 @@ var items = if (payload is Array) payload else [payload]
   totalAmount: sum(items map (i) -> i.price * i.requestedQuantity)
 }
 ]]></ee:set-payload></ee:message>
-        </ee:transform>
+    </ee:transform>
 
-        <set-variable variableName="summary" value="#[payload]" doc:name="Load Summary"/>
-        <set-variable variableName="purchaseId" value="#[uuid()]" doc:name="Purchase ID"/>
+    <!-- SAVE THE SUMMARY BEFORE CALLING INSURANCE -->
+    <set-variable variableName="summary" value="#[payload]" doc:name="Save Summary Before Insurance"/>
 
-        <!-- Insert pending purchase log - assumes pharmacy_service DB config exists -->
-        <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service" doc:id="6fc43cd0-7f66-4d28-88f8-9455fab23dda">
-            <db:sql><![CDATA[
+    <!-- NOW CALL INSURANCE -->
+    <flow-ref doc:name="Check Insurance Coverage" doc:id="4c1a54c0-5492-4fa9-ad17-042dec2bc735" name="insurance_CoverageFlow"/>
+    
+    <!-- COMBINE INSURANCE RESULT WITH SAVED SUMMARY -->
+    <ee:transform doc:name="Apply Insurance Coverage">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+
+var insurance = payload
+var summary = vars.summary
+var original = summary.totalAmount
+
+var discount =
+    if (insurance.approved)
+        (original * insurance.coveragePercentage / 100)
+    else
+        0
+---
+{
+  payableItems: summary.payableItems,
+  originalAmount: original,
+  insuranceApplied: insurance.approved,
+  coveragePercentage: insurance.coveragePercentage,
+  discountAmount: discount,
+  totalAmount: original - discount
+}
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+
+    <!-- NOW SAVE THE FINAL SUMMARY WITH INSURANCE APPLIED -->
+    <set-variable variableName="finalSummary" value="#[payload]" doc:name="Load Final Summary"/>
+    <set-variable variableName="purchaseId" value="#[uuid()]" doc:name="Purchase ID"/>
+
+    <!-- Insert pending purchase log -->
+    <db:insert doc:name="Insert Pending Purchase Log" config-ref="pharmacy_service" doc:id="ceb4a1e9-c816-45fa-aa4e-e2a5a0a86bcf">
+        <db:sql><![CDATA[
 INSERT INTO pharmacy_purchase_log
 (id, purchase_id, patient_id, patient_name, patient_email, prescription_id, request_payload, response_payload, status)
 VALUES (:id, :purchaseId, :patientId, :patientName, :patientEmail, :prescriptionId, :req, :res, 'PENDING')
 ]]></db:sql>
-            <db:input-parameters><![CDATA[#[{
+        <db:input-parameters><![CDATA[#[{
   id: uuid(),
   purchaseId: vars.purchaseId,
   patientId: vars.patientId,
@@ -114,25 +181,32 @@ VALUES (:id, :purchaseId, :patientId, :patientName, :patientEmail, :prescription
   patientEmail: vars.patientEmail,
   prescriptionId: vars.prescriptionId,
   req: write(vars.items, "application/json"),
-  res: write(vars.summary, "application/json")
+  res: write(vars.finalSummary, "application/json")
 }]]]></db:input-parameters>
-        </db:insert>
+    </db:insert>
 
-        <ee:transform doc:name="Return Summary to Spring">
-            <ee:message><ee:set-payload><![CDATA[%dw 2.0
+    <ee:transform doc:name="Return Summary to Spring">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
   purchaseId: vars.purchaseId,
   prescriptionId: vars.prescriptionId,
   patientId: vars.patientId,
-  payableItems: vars.summary.payableItems,
-  totalAmount: vars.summary.totalAmount,
+  payableItems: vars.finalSummary.payableItems,
+  originalAmount: vars.finalSummary.originalAmount,
+  discountAmount: vars.finalSummary.discountAmount,
+  totalAmount: vars.finalSummary.totalAmount,
+  insuranceApplied: vars.finalSummary.insuranceApplied,
+  coveragePercentage: vars.finalSummary.coveragePercentage,
   status: "PENDING"
 }
-]]></ee:set-payload></ee:message>
-        </ee:transform>
-    </flow>
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+
+</flow>
 
     <!-- ============================= -->
     <!--  CONFIRM PAYMENT FLOW         -->
@@ -148,7 +222,8 @@ output application/json
             <db:input-parameters><![CDATA[#[{ purchaseId: vars.purchaseId }]]]></db:input-parameters>
         </db:select>
 
-        <validation:is-not-null value="#[payload[0]]" message="Purchase ID not found or invalid" doc:name="Check Purchase ID excisting or Not"/>
+        <set-variable value="#[payload[0].patient_id]" doc:name="Set PatientID" doc:id="e3f87a56-ae18-4fe4-8911-0f33da3a988e" variableName="patientId"/>
+		<validation:is-not-null value="#[payload[0]]" message="Purchase ID not found or invalid" doc:name="Check Purchase ID excisting or Not"/>
 
         <!-- extract saved patient name / email (DB columns likely patient_name / patient_email) -->
         <validation:is-true doc:name='Check Status != "COMPLETED"' doc:id="8b8aa253-f376-4a08-bc3a-6c86fded80e4" expression="#[payload[0].status != 'COMPLETED']" message="Payment already completed for this purchase ID"/>
@@ -185,24 +260,22 @@ UPDATE pharmacy_medicines SET stock = stock - :qty WHERE sku = :sku
             <db:input-parameters><![CDATA[#[{ purchaseId: vars.purchaseId }]]]></db:input-parameters>
         </db:update>
 
-        <!-- Publish to ActiveMQ: coerce patientName / patientEmail safely -->
-        <jms:publish config-ref="JMS_Config" destination="pharmacy.payment.completed" doc:name="Publish Message to ActiveMq">
-            <jms:message>
-                <jms:body><![CDATA[
-#[write({
-    purchaseId: vars.purchaseId,
-    patientId: vars.patientId,
-    patientName: vars.patientName,
-    patientEmail: vars.patientEmail,
-    payableItems: vars.payableItems,
-    totalAmount: vars.totalAmount,
-    status: "COMPLETED"
-}, "application/json")]
-]]></jms:body>
-            </jms:message>
-        </jms:publish>
-
-        <logger level="INFO" message="ActiveMQ Message Published for #[vars.purchaseId]" doc:name="Log ActiveMQ"/>
+        <!-- Publish to Kafka: coerce patientName / patientEmail safely -->
+        <kafka:publish doc:name="Publish" doc:id="9e732fa9-9649-4bc5-b088-af0c037ca96b" 
+               config-ref="Apache_Kafka_Producer_configuration" 
+               topic="pharmacy.payment.completed" 
+               key="#[vars.purchaseId]">
+    <kafka:message><![CDATA[#[output application/json --- {
+        purchaseId: vars.purchaseId,
+        patientId: vars.patientId,
+        patientName: vars.patientName,
+        patientEmail: vars.patientEmail,
+        payableItems: vars.payableItems,
+        totalAmount: vars.totalAmount,
+        status: "COMPLETED"
+    }]]]></kafka:message>
+</kafka:publish>
+		<logger level="INFO" message="Kafka Event Published for Purchase ID :  #[vars.purchaseId]" doc:name="Log Kafka Event publish" />
 
         <ee:transform doc:name="Return Summary to Spring">
             <ee:message><ee:set-payload><![CDATA[%dw 2.0
@@ -219,52 +292,86 @@ output application/json
     </flow>
 
     <!-- ============================= -->
-    <!--  EMAIL HANDLER (LISTENS JMS)  -->
+    <!--  EMAIL HANDLER  -->
     <!-- ============================= -->
-    <flow name="pharmacy-email-handler" doc:id="4915c52b-59d2-40f7-b660-00bcd24e25a3">
-        <jms:listener config-ref="JMS_Config" destination="pharmacy.payment.completed" doc:name="Get Payload from ActiveMq">
-            <jms:consumer-type><jms:queue-consumer/></jms:consumer-type>
-        </jms:listener>
+<flow name="pharmacy-email-kafka-consumer">
 
-        <logger level="INFO" message="Received JMS message for email: #[payload]" doc:name="Log Received message"/>
+    <kafka:message-listener
+        config-ref="Apache_Kafka_Consumer_configuration"
+        doc:name="Kafka Message Listener"/>
 
-        <!-- ⭐ CRITICAL FIX: Parse JSON string to Object -->
-        <ee:transform doc:name="Parse JSON Payload">
-            <ee:message><ee:set-payload><![CDATA[%dw 2.0
+    <!-- Parse Kafka message -->
+    <ee:transform doc:name="Parse Kafka Message">
+        <ee:message>
+            <ee:set-payload><![CDATA[
+%dw 2.0
 output application/java
 ---
 read(payload, "application/json")
-]]></ee:set-payload></ee:message>
-        </ee:transform>
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
 
-        <!-- Prepare email: now payload is an Object, not a String -->
-        <ee:transform doc:name="Prepare Email">
-            <ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/java
----
-{
-  to: payload.patientEmail,
-  subject: "Your Pharmacy Purchase Receipt",
-  body: 
-    "Hello " ++ payload.patientName ++ ",\n\n" ++
-    "Your payment has been successfully completed.\n\n" ++
-    "Purchase ID: " ++ payload.purchaseId ++ "\n" ++
-    "Total Amount: Rs " ++ (payload.totalAmount as String) ++ "\n\n" ++
-    "Regards,\nHospital Management System"
-}
-]]></ee:set-payload></ee:message>
-        </ee:transform>
+    <try>
 
-        <email:send config-ref="Email_SMTP" fromAddress="kannan3807@gmail.com" subject="#[payload.subject]" doc:name="Send Mail" doc:id="27629eb9-0778-44fe-b1ad-df9db9fd2c86">
+        <!-- OPTIONAL: force failure for testing -->
+        <!-- <raise-error type="EMAIL:FORCED_FAILURE" description="Testing DLQ"/> -->
+
+        <!-- Send email -->
+        
+       <!--    
+       <raise-error type="APP:FORCED_FAILURE"
+             description="Testing DLQ path"/>
+        -->
+        <email:send
+            config-ref="Email_SMTP"
+            fromAddress="kannan3807@gmail.com"
+            subject="Your Pharmacy Purchase Receipt">
+
             <email:to-addresses>
-                <email:to-address value="#[payload.to]"/>
+                <email:to-address value="#[payload.patientEmail]"/>
             </email:to-addresses>
-            <email:body contentType="text/plain">
-                <email:content><![CDATA[#[payload.body]]]></email:content>
-            </email:body>
+
+            <email:body contentType="text/plain" contentTransferEncoding="Binary">
+					<email:content ><![CDATA[#[
+        'Hello ' ++ payload.patientName ++ '\n\n' ++
+        'Your payment has been successfully completed.\n\n' ++
+        'Purchase ID: ' ++ payload.purchaseId ++ '\n' ++
+        'Total Amount: Rs ' ++ (payload.totalAmount as String)
+    ]]]></email:content>
+</email:body>
+
         </email:send>
 
-        <logger level="INFO" message="Email sent to #[payload.to]" doc:name="Logger Final Response"/>
-    </flow>
+        <logger level="INFO"
+                message="Email successfully sent to #[payload.patientEmail]"/>
+
+        <error-handler>
+            <on-error-continue logException="true">
+
+                <logger level="ERROR"
+                        message="Email failed, publishing to DLQ: #[error.description]"/>
+
+                <kafka:publish
+                    config-ref="Apache_Kafka_Producer_configuration"
+                    topic="pharmacy.payment.email.dlq">
+
+                    <kafka:message><![CDATA[
+#[write({
+    originalMessage: payload,
+    errorMessage: error.description,
+    failedAt: now(),
+    service: "pharmacy-email-service"
+}, "application/json")]
+]]></kafka:message>
+
+                </kafka:publish>
+
+            </on-error-continue>
+        </error-handler>
+
+    </try>
+
+</flow>
 
 </mule>

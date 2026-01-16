@@ -70,34 +70,6 @@ assert_expression_payload2::main({payload: payload, attributes: attributes, vars
 			</munit-tools:assert>
 		</munit:validation>
 	</munit:test>
-	<munit:test name="pharmacy-email-handler-test" doc:id="d4946999-4d66-492e-a59f-d46fb6cd4841" >
-		<munit:behavior >
-			<munit-tools:mock-when doc:name="Mock Send Mail" doc:id="a8417099-a231-4bbd-893c-00f1f7757dd6" processor="email:send">
-				<munit-tools:with-attributes >
-					<munit-tools:with-attribute whereValue="27629eb9-0778-44fe-b1ad-df9db9fd2c86" attributeName="doc:id" />
-				</munit-tools:with-attributes>
-				<munit-tools:then-return >
-					<munit-tools:payload value="#[output application/java --- readUrl('classpath://pharmacyemailhandlertest\mock_payload.dwl')]" mediaType="application/java" encoding="UTF-8" />
-					<munit-tools:attributes value="#[output application/java --- readUrl('classpath://pharmacyemailhandlertest\mock_attributes.dwl')]" mediaType="application/java" />
-				</munit-tools:then-return>
-			</munit-tools:mock-when>
-			<munit:set-event doc:name="Set Input" doc:id="8b4738a6-4d35-4687-8645-4bf3478c947d" >
-				<munit:payload value="#[output application/json --- readUrl('classpath://pharmacyemailhandlertest\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
-				<munit:attributes value="#[output application/java --- readUrl('classpath://pharmacyemailhandlertest\set-event_attributes.dwl')]" mediaType="application/java" />
-			</munit:set-event>
-		</munit:behavior>
-		<munit:execution >
-			<flow-ref doc:name="Flow-ref to pharmacy-email-handler" doc:id="63bbd636-8512-4bce-96c9-247159ab6da9" name="pharmacy-email-handler"/>
-		</munit:execution>
-		<munit:validation >
-			<munit-tools:assert doc:name="Assert payload" doc:id="ac1f2134-2d24-4832-ad50-89b4939bcc66" message="The payload does not match">
-				<munit-tools:that ><![CDATA[#[%dw 2.0
-import pharmacyemailhandlertest::assert_expression_payload
----
-assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
-			</munit-tools:assert>
-		</munit:validation>
-	</munit:test>
 	<munit:test name="pharmacy_paymentFlow-test" doc:id="b29b6760-93c9-4da0-9236-44147137fd6e" >
 		<munit:behavior >
 			<munit-tools:mock-when doc:name="Mock Insert Pending Purchase Log" doc:id="c6512f37-8509-4d07-81b6-434263246d1b" processor="db:insert">

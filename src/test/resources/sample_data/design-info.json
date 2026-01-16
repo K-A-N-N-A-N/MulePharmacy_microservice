@@ -6,6 +6,12 @@
     },
     "79fe8e58-6c6b-4e29-8d88-9f7acfced4e0": {
       "attributes": "sample_data/defaultstringtype_1.dwl"
+    },
+    "a9c43e5e-45bc-4c4c-a032-1a15922f416d": {
+      "vars-prescriptionId": "sample_data/java.dwl",
+      "vars-summary": "sample_data/java_1.dwl",
+      "vars-patientId": "sample_data/java_2.dwl",
+      "vars-purchaseId": "sample_data/defaultstringtype_2.dwl"
     }
   }
 }

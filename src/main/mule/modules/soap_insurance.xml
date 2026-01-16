@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<wsc:config name="Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="d2ad735b-705d-4fa8-af51-7ce9fc24e155" >
+		<wsc:connection wsdlLocation="wsdl/insurance.wsdl" service="InsuranceService" port="InsurancePort" />
+	</wsc:config>
+	<sub-flow name="insurance_CoverageFlow" doc:id="e223cd98-848d-4772-a488-98d790fa42ad" >
+		<ee:transform doc:name="Transform Message" doc:id="613c5bf5-d3bd-4993-b636-1ff53400b5e7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ins http://insurance.example/ws
+---
+ins#checkCoverage: {
+    policyId: vars.patientId,
+    amount: vars.summary.totalAmount
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume doc:name="Consume" doc:id="3ef10e73-810f-40e5-8345-ec1fd3f33aa3" config-ref="Web_Service_Consumer_Config" operation="checkCoverage" />
+		<ee:transform doc:name="Transform Message" doc:id="7032e470-24b7-490a-9738-4a9bb12e316b">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+ns ins http://insurance.example/ws
+---
+{
+  approved: payload.body.checkCoverageResponse.approved,
+  coveragePercentage: payload.body.checkCoverageResponse.coveragePercentage
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<flow name="soap_insuranceFlow" doc:id="9af80414-f853-4f52-b062-d60bf50b2c01">
+
+    <http:listener
+        config-ref="Soap_insurance"
+        path="/soap_insurance"
+        allowedMethods="POST"
+        outputMimeType="application/json"/>
+
+    <!-- Read JSON input -->
+    <ee:transform doc:name="Normalize Input">
+        <ee:message>
+            <ee:set-payload><![CDATA[
+%dw 2.0
+output application/java
+---
+payload
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+
+    <!-- Set variables required by sub-flow -->
+    <set-variable variableName="patientId" value="#[payload.patientId]" />
+    <set-variable variableName="summary" value="#[{ totalAmount: payload.totalAmount }]" />
+
+    <!-- Call SOAP sub-flow -->
+    <flow-ref name="insurance_CoverageFlow"/>
+
+    <!-- Return SOAP result -->
+    <ee:transform doc:name="Return Insurance Result">
+        <ee:message>
+            <ee:set-payload><![CDATA[
+%dw 2.0
+output application/json
+---
+payload
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+
+</flow>
+
+<flow name="insurance_soap_provider">
+
+    <http:listener
+        config-ref="Soap_insurance"
+        path="/insurance"
+        allowedMethods="POST"/>
+
+    <logger level="INFO"
+            message="INSURANCE SOAP REQUEST RECEIVED"/>
+
+    <!-- Extract SOAP request -->
+    <ee:transform doc:name="Extract SOAP Request">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+input payload application/xml
+output application/java
+ns soapenv http://schemas.xmlsoap.org/soap/envelope/
+ns ins http://insurance.example/ws
+---
+{
+  policyId: payload.soapenv#Envelope.soapenv#Body.ins#checkCoverage.policyId,
+  amount: payload.soapenv#Envelope.soapenv#Body.ins#checkCoverage.amount
+}
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+
+    <logger level="INFO"
+            message="Insurance request: #[payload]"/>
+
+    <!-- Business logic - WRAP IN SOAP ENVELOPE -->
+    <ee:transform doc:name="Insurance Logic">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns soapenv http://schemas.xmlsoap.org/soap/envelope/
+ns ins http://insurance.example/ws
+---
+soapenv#Envelope: {
+  soapenv#Body: {
+    ins#checkCoverageResponse: {
+      approved: payload.amount < 5000,
+      coveragePercentage: if (payload.amount < 5000) 80 else 0
+    }
+  }
+}
+]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+
+</flow>
+
+</mule>
